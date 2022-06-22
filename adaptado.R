@@ -107,7 +107,10 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
     sequ=1:n
     for (i in 1:n){
       seqi=matrix(i,nrow=n,ncol=1)
-      distan=cbind(cbind(seqi, t(sequ)), distance[,i])
+      if (i==1){
+        print(t(distance[,i]))
+      }
+      distan=cbind(cbind(seqi, t(sequ)), t(distance[,i]))
       u=nrow(distan)
       w=matrix(0,u,1)
       if (method=="fixed"){
@@ -338,11 +341,11 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
     }
     if (gwr!="poisson"){
       ll=sum(y%*%log(alpha%*%yhat)-(y+1/alpha)%*%log(1+alpha%*%yhat)+ algamma - blgamma - clgamma )
-      npar=trace(S)+1
+      npar=sum(diag(S))+1
     }
     else{
       ll=sum(-yhat+y%*%log(yhat)-clgamma)
-      npar=trace(S)
+      npar=sum(diag(S))
     }
     #AIC= 2*npar + dev;#
     AIC= 2*npar -2*ll
@@ -353,7 +356,7 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
   }
   if (type=="cv"){
     pos=1
-    create &out var{h1 res1 h2 res2}
+    out <- c("h1", "res1", "h2", "res2")
   }
   else{
     if (type=="aic"){
@@ -362,14 +365,15 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
     else{
       pos=4
     }
-    create &out var{h1 res1 npar1 h2 res2 npar2}
+    out <- c("h1", "res1", "npar1", "h2", "res2", "npar2")
   }
-  res1=cv(h1)
+  res1=cv(h1, method=method, n=n, coord=COORD, x=x, y=y, type=type, maxd=maxd, gwr=gwr, offset=offset, distance=distance)
   npar1=res1[3]
   res1=res1[pos]
-  res2=cv(h2)
+  res2=cv(h2, method=method, n=n, coord=COORD, x=x, y=y, type=type, maxd=maxd, gwr=gwr, offset=offset, distance=distance)
   npar2=res2[3]
   res2=res2[pos]
+  out <- rbind(out, c(h1, res1, npar1, h2, res2, npar2))
   while(abs(h3-h0) > tol*2){
     if (res2<res1){
       h0=h1
@@ -442,14 +446,13 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
 
 ############### EXEMPLO ###############
 setwd('~/PIBIC/golden_section_search')
-es.data_gwnbr <- read.table('data_gwnbr.txt', header=T)
+data_gwnbr <- read.table('data_gwnbr.txt', header=T)
 golden(es.data_gwnbr$fleet, es.data_gwnbr$industry, es.data_gwnbr$Y, es.data_gwnbr$x, method="fixed", type="cv", gwr="global")
 
 cat(mean(es.data_gwnbr$fleet), var(es.data_gwnbr$fleet))
 hist(es.data_gwnbr$fleet)
 
-golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbry,long=data_gwnbrx,method="fixed",
-        type="aic",gwr="local")
+golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr$Y,method="fixed", type="aic",gwr="local")
 
 #proc gplot data=band;
 #plot(res1*h1 res2*h2 /overlay vaxis=axis1 name="band_";
