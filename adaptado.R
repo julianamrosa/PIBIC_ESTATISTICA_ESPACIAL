@@ -1,8 +1,8 @@
 ############### GOLDEN SECTION SEARCH ###############
 golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
+  E <- 10
   COORD <- matrix(c(long, lat), ncol=2, byrow=F)
   n <- length(y)
-  print(COORD)
   if (is.null(offset)){
     offset <- matrix(0, nrow=n, ncol=1)
   }
@@ -30,6 +30,7 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
   h2 <- h0+r*(h3-h0)
   cat(h0, h1, h2, h3)
   cv <- function(h, method, n, coord, x, y, type, maxd, gwr, offset, distance){
+    E <- 10
     alphaii <- matrix(0, nrow=n, ncol=2)
     yhat <- matrix(0, nrow=n, ncol=1)
     S <- matrix(0, nrow=n,ncol=n)
@@ -50,12 +51,11 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
           if (par<0){
             par=0.00001
           }
-          E <- 10
           par=ifelse(par<E^-10,E^-10,par)
           g=sum(digamma(par+y)-digamma(par)+log(par)+1-log(par+u)-(par+y)/(par+u))
           hess=sum(trigamma(par+y)-trigamma(par)+1/par-2/(par+u)+(y+par)/((par+u)%*%(par+u)))
           hess=ifelse(abs(hess)<E^-23,sign(hess)*E^-23,hess)
-          hess=ifelse(hess=0,1E-23,hess)
+          hess=ifelse(hess==0,1E-23,hess)
           par0=par
           par=par0-solve(hess)*g
           if (aux1>50 & par>E^5){
@@ -108,9 +108,8 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
     for (i in 1:n){
       seqi=matrix(i,nrow=n,ncol=1)
       if (i==1){
-        print(t(distance[,i]))
       }
-      distan=cbind(cbind(seqi, t(sequ)), t(distance[,i]))
+      distan=cbind(cbind(seqi, sequ), as.matrix(distance)[,i])
       u=nrow(distan)
       w=matrix(0,u,1)
       if (method=="fixed"){
@@ -209,7 +208,7 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
             hess=sum((trigamma(par+y)-trigamma(par)+1/par-2/(par+uj)+(y+par)/((par+uj)%*%(par+uj)))%*%w[,1])
           }
           hess=ifelse(abs(hess)<E^-23,sign(hess)*E^-23,hess)
-          hess=ifelse(hess=0,E^-23,hess)
+          hess=ifelse(hess==0,E^-23,hess)
           par0=par
           par=par0-solve(hess)*g
           if (par<=0){
@@ -258,6 +257,7 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
           Ai=(uj/(1+alpha*uj))+(y-uj)%*%aux
           Ai=ifelse(Ai<=0,E^-5,Ai)
           zj=nj+(y-uj)/(Ai%*%(1+alpha*uj)) - offset
+          print(x)
           if (det(t(x)*(wi%*%Ai%*%x))==0){
             bi=matrix(0,ncol(x),1)
           }
