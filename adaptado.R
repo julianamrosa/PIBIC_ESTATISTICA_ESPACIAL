@@ -7,7 +7,7 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
     offset <- matrix(0, nrow=n, ncol=1)
   }
   x <- cbind(matrix(1, nrow=n, ncol=1), x)
-  cat(method, type, gwr)
+  print(c(method, type, gwr))
   distance <- dist(COORD, "euclidean")
   maxd <- max(distance)
   if (method=="adaptive1"){
@@ -28,7 +28,7 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
   }
   h1 <- h0+(1-r)*(h3-h0)
   h2 <- h0+r*(h3-h0)
-  cat(h0, h1, h2, h3)
+  print(c(h0, h1, h2, h3))
   cv <- function(h, method, n, coord, x, y, type, maxd, gwr, offset, distance){
     E <- 10
     alphaii <- matrix(0, nrow=n, ncol=2)
@@ -53,9 +53,9 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
           }
           par=ifelse(par<E^-10,E^-10,par)
           g=sum(digamma(par+y)-digamma(par)+log(par)+1-log(par+u)-(par+y)/(par+u))
-          hess=sum(trigamma(par+y)-trigamma(par)+1/par-2/(par+u)+(y+par)/((par+u)%*%(par+u)))
+          hess=sum(trigamma(par+y)-trigamma(par)+1/par-2/(par+u)+(y+par)/((par+u)*(par+u)))
           hess=ifelse(abs(hess)<E^-23,sign(hess)*E^-23,hess)
-          hess=ifelse(hess==0,1E-23,hess)
+          hess=ifelse(hess==0,E^-23,hess)
           par0=par
           par=par0-solve(hess)*g
           if (aux1>50 & par>E^5){
@@ -81,16 +81,16 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
         i=0
         while (abs(ddev)>0.00001 & i<800){
           i=i+1
-          w=(u/(1+a*u))+(y-u)%*%(a*u/(1+2*a*u+a*a*u%*%u))
-          z=n+(y-u)/(w%*%(1+a*u)) - offset
-          b=solve(t(x%*%w)*x)*t(x%*%w)*z
-          n=x*b + offset
+          w=(u/(1+a*u))+(y-u)*(a%*%u/(1+2*a%*%u+a%*%a%*%u*u))
+          z=n+(y-u)/(w*(1+a%*%u)) - offset
+          b=solve(t(x*w)%*%x)%*%t(x*w)%*%z
+          n=x%*%b + offset
           u=exp(n)
           olddev=dev
           u=ifelse(u<E^-150,E^-150,u)
           tt=y/u
           tt=ifelse(tt==0,E^-10,tt)
-          dev=2*sum(y%*%log(tt)-(y+1/a)%*%log((1+a*y)/(1+a*u)))
+          dev=2*sum(y*log(tt)-(y+1/a)*log((1+a%*%y)/(1+a%*%u)))
           ddev=dev-olddev
         }
         if (aux2>4){
@@ -204,8 +204,8 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
           aux1=aux1+1
           if (gwr=="local"){
             par=ifelse(par<E^-10,E^-10,par)
-            g=sum((digamma(par+y)-digamma(par)+log(par)+1-log(par+uj)-(par+y)/(par+uj))%*%w[,1])
-            hess=sum((trigamma(par+y)-trigamma(par)+1/par-2/(par+uj)+(y+par)/((par+uj)%*%(par+uj)))%*%w[,1])
+            g=sum((digamma(par+y)-digamma(par)+log(par)+1-log(par+uj)-(par+y)/(par+uj))*w[,1])
+            hess=sum((trigamma(par+y)-trigamma(par)+1/par-2/(par+uj)+(y+par)/((par+uj)*(par+uj)))*w[,1])
           }
           hess=ifelse(abs(hess)<E^-23,sign(hess)*E^-23,hess)
           hess=ifelse(hess==0,E^-23,hess)
@@ -253,18 +253,17 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
         while (abs(ddev)>0.000001 & cont<800){
           cont=cont+1
           uj=ifelse(uj>E^100,E^100,uj)
-          aux=(alpha*uj/(1+2*alpha*uj+alpha*alpha*uj%*%uj))
-          Ai=(uj/(1+alpha*uj))+(y-uj)%*%aux
+          aux=(as.numeric(alpha)*uj/(1+2*as.numeric(alpha)*uj+as.numeric(alpha%*%alpha)*uj*uj))
+          Ai=(uj/(1+as.numeric(alpha)*uj))+(y-uj)*aux
           Ai=ifelse(Ai<=0,E^-5,Ai)
-          zj=nj+(y-uj)/(Ai%*%(1+alpha*uj)) - offset
-          print(x)
-          if (det(t(x)*(wi%*%Ai%*%x))==0){
+          zj=nj+(y-uj)/(Ai*(1+as.numeric(alpha)*uj)) - offset
+          if (det(t(x)%*%(as.numeric(wi)*as.numeric(Ai)*x))==0){
             bi=matrix(0,ncol(x),1)
           }
           else{
-            bi=solve(t(x)*(wi%*%Ai%*%x))*t(x)*(wi%*%Ai%*%zj)
+            bi=solve(t(x)%*%(as.numeric(wi*Ai)*x))%*%t(x)%*%(as.numeric(wi*Ai)*zj)
           }
-          nj=x*bi + offset
+          nj=x%*%bi + offset
           nj=ifelse(nj>E^2,E^2,nj)
           uj=exp(nj)
           olddev=dev
@@ -272,10 +271,10 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
           tt=y/uj
           tt=ifelse(tt==0,E^-10,tt)
           if (gwr=="poisson"){
-            dev=2*sum(y%*%log(tt)-(y-uj))
+            dev=2*sum(y*log(tt)-(y-uj))
           }
           else{
-            dev=2*sum(y%*%log(tt)-(y+1/alpha)%*%log((1+alpha*y)/(1+alpha*uj)))
+            dev=2*sum(y*log(tt)-(y+1/alpha)*log((1+alpha*y)/(1+as.numeric(alpha)*uj)))
           }
           if (cont>100){
             ddev= 0.0000001
@@ -295,16 +294,16 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
           }
         }
       }
-      Ai2=(uj/(1+alpha*uj))+(y-uj)%*%(alpha*uj/(1+2*alpha*uj+alpha*alpha*uj%*%uj))
+      Ai2=(uj/(1+as.numeric(alpha)*uj))+(y-uj)*(as.numeric(alpha)*uj/(1+2*as.numeric(alpha)*uj+as.numeric(alpha*alpha)*uj*uj))
       if (all(apply(Ai2, 2, min)<E^-5)){
         Ai2=ifelse(Ai2<E^-5,E^-5,Ai2)
       }
       Ai=Ai2
-      if (det(t(x)*(wi%*%Ai%*%x))==0){
+      if (det(t(x)%*%(as.numeric(wi*Ai)*x))==0){
         S[i,]=matrix(0,1,n)
       }
       else{
-        S[i,]=x[i,]*solve(t(x)*(wi%*%Ai%*%x))*t(x%*%wi%*%Ai)
+        S[i,]=x[i,]%*%solve(t(x)%*%(as.numeri(wi*Ai)*x))%*%t(x*wi*Ai)
       }
       yhat[i]=uj[i]
       alphaii[i,1]=i
@@ -315,10 +314,10 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
     tt=y/yhat
     tt=ifelse(tt==0,E^-10,tt)
     if (gwr=="poisson"){
-      dev=2*sum(y%*%log(tt)-(y-yhat))
+      dev=2*sum(y*log(tt)-(y-yhat))
     }
     else{
-      dev=2*sum(y%*%log(tt)-(y+1/alpha)%*%log((1+alpha%*%y)/(1+alpha%*%yhat)))
+      dev=2*sum(y*log(tt)-(y+1/alpha)*log((1+alpha*y)/(1+alpha*yhat)))
     }
     if (gwr!="poisson"){
       a2=y+1/alpha
@@ -333,24 +332,24 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
     }
     algamma=matrix(0,n,1)
     blgamma=matrix(0,n,1)
-    clgamma=j(0,n,1)
+    clgamma=matrix(0,n,1)
     for (i in 1:length(y)){
       algamma[i]=lgamma(a2[i])
       blgamma[i]=lgamma(b2[i])
       clgamma[i]=lgamma(c2[i])
     }
     if (gwr!="poisson"){
-      ll=sum(y%*%log(alpha%*%yhat)-(y+1/alpha)%*%log(1+alpha%*%yhat)+ algamma - blgamma - clgamma )
+      ll=sum(y*log(alpha*yhat)-(y+1/alpha)*log(1+alpha*yhat)+ algamma - blgamma - clgamma )
       npar=sum(diag(S))+1
     }
     else{
-      ll=sum(-yhat+y%*%log(yhat)-clgamma)
+      ll=sum(-yhat+y*log(yhat)-clgamma)
       npar=sum(diag(S))
     }
     #AIC= 2*npar + dev;#
     AIC= 2*npar -2*ll
-    AICC= AIC +(2*npar*(npar+1))/(n-npar-1)
-    CV=t(y-yhat)*(y-yhat)
+    aicc= AIC +(2*npar*(npar+1))/(n-npar-1)
+    cv=t(y-yhat)%*%(y-yhat)
     res=cbind(cbind(cbind(cv,aicc),npar),dev)
     return (res)
   }
@@ -381,7 +380,7 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
       h2=c*h1+r*h3
       res1=res2
       npar1=npar2
-      res2=cv(h2)
+      res2=cv(h2, method=method, n=n, coord=COORD, x=x, y=y, type=type, maxd=maxd, gwr=gwr, offset=offset, distance=distance)
       npar2=res2[3]
       res2=res2[pos]
     }
@@ -391,7 +390,7 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
       h1=c*h2+r*h0
       res2=res1
       npar2=npar1
-      res1=cv(h1)
+      res1=cv(h1, method=method, n=n, coord=COORD, x=x, y=y, type=type, maxd=maxd, gwr=gwr, offset=offset, distance=distance)
       npar1=res1[3]
       res1=res1[pos]
     }
@@ -400,9 +399,9 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
     xmin = (h3+h0)/2
     h2=ceiling(xmin)
     h1=floor(xmin)
-    golden1 = cv(h1)
+    golden1 = cv(h1, method=method, n=n, coord=COORD, x=x, y=y, type=type, maxd=maxd, gwr=gwr, offset=offset, distance=distance)
     g1= golden1[pos]
-    golden2= cv(h2)
+    golden2= cv(h2, method=method, n=n, coord=COORD, x=x, y=y, type=type, maxd=maxd, gwr=gwr, offset=offset, distance=distance)
     g2= golden2[pos]
     npar1=golden1[3]
     res1=golden1[pos]
@@ -421,7 +420,7 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
   }
   else{
       xmin = (h3+h0)/2
-      golden = cv(xmin)
+      golden = cv(xmin, method=method, n=n, coord=COORD, x=x, y=y, type=type, maxd=maxd, gwr=gwr, offset=offset, distance=distance)
       npar=golden[3]
       golden=golden[pos]
   }
@@ -432,10 +431,10 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
   res2 = NA
   npar2= NA
   if (type=="cv"){
-    cat(golden, xmin)
+    print(c(golden, xmin))
   }
   else{
-    cat(golden, xmin, npar)
+    format(c(golden, xmin, npar), scientific=FALSE)
   }
 }
 
@@ -449,8 +448,8 @@ setwd('~/PIBIC/golden_section_search')
 data_gwnbr <- read.table('data_gwnbr.txt', header=T)
 golden(es.data_gwnbr$fleet, es.data_gwnbr$industry, es.data_gwnbr$Y, es.data_gwnbr$x, method="fixed", type="cv", gwr="global")
 
-cat(mean(es.data_gwnbr$fleet), var(es.data_gwnbr$fleet))
-hist(es.data_gwnbr$fleet)
+print(c(mean(data_gwnbr$fleet), var(data_gwnbr$fleet)))
+hist(data_gwnbr$fleet, breaks=c(-125, 125, 375, 625, 875, 1125, 1375, 1625, 1875))
 
 golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr$Y,method="fixed", type="aic",gwr="local")
 
