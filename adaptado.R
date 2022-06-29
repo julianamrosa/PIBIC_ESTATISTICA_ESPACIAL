@@ -7,7 +7,7 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
     offset <- matrix(0, nrow=n, ncol=1)
   }
   x <- cbind(matrix(1, nrow=n, ncol=1), x)
-  print(c(method, type, gwr))
+  #print(c(method, type, gwr))
   distance <- dist(COORD, "euclidean")
   maxd <- max(distance)
   if (method=="adaptive1"){
@@ -28,7 +28,7 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
   }
   h1 <- h0+(1-r)*(h3-h0)
   h2 <- h0+r*(h3-h0)
-  print(c(h0, h1, h2, h3))
+  #print(c(h0, h1, h2, h3))
   cv <- function(h, method, n, coord, x, y, type, maxd, gwr, offset, distance){
     E <- 10
     alphaii <- matrix(0, nrow=n, ncol=2)
@@ -76,6 +76,8 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
           }
         }
         a=1/par
+        #print(a)
+        #print(par)
         dev=0
         ddev=1
         i=0
@@ -116,6 +118,16 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
         if (type=="cv"){
           for (jj in 1:u){
             if (distan[jj,3]<=maxd*0.8 & distan[jj,3]!=0){
+              w[jj]=exp(-0.5*(distan[jj,3]/h)^2)
+            }
+            else{
+              w[jj]=0
+            }
+          }
+        }
+        else{
+          for (jj in 1:u){
+            if (distan[jj,3]<=maxd*0.8) {
               w[jj]=exp(-0.5*(distan[jj,3]/h)^2)
             }
             else{
@@ -175,6 +187,7 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
         }
         w = w[order(w[, 2]), ]
       }
+      
       wi=w[,1]
       ym=sum(y)/length(y)
       uj=(y+ym)/2
@@ -204,13 +217,14 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
           aux1=aux1+1
           if (gwr=="local"){
             par=ifelse(par<E^-10,E^-10,par)
-            g=sum((digamma(par+y)-digamma(par)+log(par)+1-log(par+uj)-(par+y)/(par+uj))*w[,1])
-            hess=sum((trigamma(par+y)-trigamma(par)+1/par-2/(par+uj)+(y+par)/((par+uj)*(par+uj)))*w[,1])
+            g=sum((digamma(par+y)-digamma(par)+log(par)+1-log(as.numeric(par)+uj)-(par+y)/(as.numeric(par)+uj))*w[,1])
+            hess=sum((trigamma(par+y)-trigamma(par)+1/par-2/(as.numeric(par)+uj)+(y+par)/((as.numeric(par)+uj)*(as.numeric(par)+uj)))*w[,1])
           }
           hess=ifelse(abs(hess)<E^-23,sign(hess)*E^-23,hess)
           hess=ifelse(hess==0,E^-23,hess)
           par0=par
           par=par0-solve(hess)*g
+          #print(par)
           if (par<=0){
             count=count+1
             if (count<10){
@@ -245,6 +259,10 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
         }
         else{
           alpha=1/par
+        }
+        if(i==1){
+          #print(par)
+          #print(alpha)
         }
         dev=0
         ddev=1
@@ -303,7 +321,7 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
         S[i,]=matrix(0,1,n)
       }
       else{
-        S[i,]=x[i,]%*%solve(t(x)%*%(as.numeri(wi*Ai)*x))%*%t(x*wi*Ai)
+        S[i,]=x[i,]%*%solve(t(x)%*%(as.numeric(wi*Ai)*x))%*%t(x*as.numeric(wi*Ai))
       }
       yhat[i]=uj[i]
       alphaii[i,1]=i
@@ -351,6 +369,7 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
     aicc= AIC +(2*npar*(npar+1))/(n-npar-1)
     cv=t(y-yhat)%*%(y-yhat)
     res=cbind(cbind(cbind(cv,aicc),npar),dev)
+    #print(res)
     return (res)
   }
   if (type=="cv"){
@@ -431,7 +450,7 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
   res2 = NA
   npar2= NA
   if (type=="cv"){
-    print(c(golden, xmin))
+    #print(c(golden, xmin))
   }
   else{
     format(c(golden, xmin, npar), scientific=FALSE)
