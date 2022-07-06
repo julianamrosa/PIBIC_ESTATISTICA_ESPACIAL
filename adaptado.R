@@ -7,7 +7,7 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
     offset <- matrix(0, nrow=n, ncol=1)
   }
   x <- cbind(matrix(1, nrow=n, ncol=1), x)
-  #print(c(method, type, gwr))
+  print(c(method, type, gwr))
   distance <- dist(COORD, "euclidean")
   maxd <- max(distance)
   if (method=="adaptive1"){
@@ -28,7 +28,7 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
   }
   h1 <- h0+(1-r)*(h3-h0)
   h2 <- h0+r*(h3-h0)
-  #print(c(h0, h1, h2, h3))
+  print(c(h0, h1, h2, h3))
   cv <- function(h, method, n, coord, x, y, type, maxd, gwr, offset, distance){
     E <- 10
     alphaii <- matrix(0, nrow=n, ncol=2)
@@ -159,8 +159,12 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
         }
       }
       else if (method=="adaptive1"){
-        distan = distan[order(distan[, 3]),]
-        distan=cbind(dist, t(1:n))
+        distan = distan[order(distan[,3]),]
+        #h <- floor(h)
+        # print(h)
+        # print(distan)
+        # print(distan[32,3])
+        distan=cbind(distan,1:n)
         w=matrix(0,n,2)
         hn=distan[h,3]
         if (type=="cv"){
@@ -182,7 +186,7 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
             else{
               w[jj,1]=0
             }
-            w[jj,2]=dist[jj,2]
+            w[jj,2]=distan[jj,2]
           }
         }
         w = w[order(w[, 2]), ]
@@ -217,14 +221,13 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
           aux1=aux1+1
           if (gwr=="local"){
             par=ifelse(par<E^-10,E^-10,par)
-            g=sum((digamma(par+y)-digamma(par)+log(par)+1-log(as.numeric(par)+uj)-(par+y)/(as.numeric(par)+uj))*w[,1])
+            g=sum((digamma(par+y)-digamma(par)+log(par)+1-log(as.numeric(par)+uj)-(as.numeric(par)+y)/(as.numeric(par)+uj))*w[,1])
             hess=sum((trigamma(par+y)-trigamma(par)+1/par-2/(as.numeric(par)+uj)+(y+par)/((as.numeric(par)+uj)*(as.numeric(par)+uj)))*w[,1])
           }
           hess=ifelse(abs(hess)<E^-23,sign(hess)*E^-23,hess)
           hess=ifelse(hess==0,E^-23,hess)
           par0=par
           par=par0-solve(hess)*g
-          #print(par)
           if (par<=0){
             count=count+1
             if (count<10){
@@ -374,7 +377,7 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
   }
   if (type=="cv"){
     pos=1
-    out <- c("h1", "res1", "h2", "res2")
+    out <<- c("h1", "res1", "h2", "res2")
   }
   else{
     if (type=="aic"){
@@ -383,7 +386,7 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
     else{
       pos=4
     }
-    out <- c("h1", "res1", "npar1", "h2", "res2", "npar2")
+    out <<- c("h1", "res1", "npar1", "h2", "res2", "npar2")
   }
   res1=cv(h1, method=method, n=n, coord=COORD, x=x, y=y, type=type, maxd=maxd, gwr=gwr, offset=offset, distance=distance)
   npar1=res1[3]
@@ -391,7 +394,12 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
   res2=cv(h2, method=method, n=n, coord=COORD, x=x, y=y, type=type, maxd=maxd, gwr=gwr, offset=offset, distance=distance)
   npar2=res2[3]
   res2=res2[pos]
-  out <- rbind(out, c(h1, res1, npar1, h2, res2, npar2))
+  if (type=="cv"){
+    out <<- rbind(out, c(h1, res1, h2, res2))
+     }
+  else{
+    out <<- rbind(out, c(h1, res1, npar1, h2, res2,npar2))
+      }
   while(abs(h3-h0) > tol*2){
     if (res2<res1){
       h0=h1
@@ -402,6 +410,7 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
       res2=cv(h2, method=method, n=n, coord=COORD, x=x, y=y, type=type, maxd=maxd, gwr=gwr, offset=offset, distance=distance)
       npar2=res2[3]
       res2=res2[pos]
+      out <<- rbind(out, c(h1, res1, npar1, h2, res2, npar2))
     }
     else{
       h3=h2
@@ -412,6 +421,7 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
       res1=cv(h1, method=method, n=n, coord=COORD, x=x, y=y, type=type, maxd=maxd, gwr=gwr, offset=offset, distance=distance)
       npar1=res1[3]
       res1=res1[pos]
+      out <<- rbind(out, c(h1, res1, npar1, h2, res2, npar2))
     }
   }
   if (method=="adaptive1"){
@@ -426,6 +436,13 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
     res1=golden1[pos]
     npar2=golden2[3]
     res2=golden2[pos]
+    if(type=="cv"){
+      out <<- rbind(out, c(h1, res1, h2, res2))
+    }
+    else{
+      out <<- rbind(out, c(h1, res1, npar1, h2, res2, npar2))
+    }
+    
     if (g1<g2){
       xmin=h1
       npar=golden1[3]
@@ -442,6 +459,12 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
       golden = cv(xmin, method=method, n=n, coord=COORD, x=x, y=y, type=type, maxd=maxd, gwr=gwr, offset=offset, distance=distance)
       npar=golden[3]
       golden=golden[pos]
+      if(type=="cv"){
+        out <<- rbind(out, c(h1, res1, h2, res2))
+      }
+      else{
+        out <<- rbind(out, c(h1, res1, npar1, h2, res2, npar2))
+      }
   }
   h1 = xmin
   res1 = golden
@@ -449,12 +472,14 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
   h2 = NA
   res2 = NA
   npar2= NA
+  out <<- rbind(out, c(h1, res1, npar1, h2, res2, npar2))
   if (type=="cv"){
-    #print(c(golden, xmin))
+    print(c(golden, xmin))
   }
   else{
-    format(c(golden, xmin, npar), scientific=FALSE)
+    print(format(c(golden, xmin, npar), scientific=FALSE))
   }
+  print(out)
 }
 
 ### Trocas
@@ -470,9 +495,23 @@ golden(es.data_gwnbr$fleet, es.data_gwnbr$industry, es.data_gwnbr$Y, es.data_gwn
 print(c(mean(data_gwnbr$fleet), var(data_gwnbr$fleet)))
 hist(data_gwnbr$fleet, breaks=c(-125, 125, 375, 625, 875, 1125, 1375, 1625, 1875))
 
+# Teste 1
 golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr$Y,method="fixed", type="aic",gwr="local")
+print(out)
+out <- out[-1,]
+out <- data.frame(out)
+x11() #expandir margens
+plot(x=out$V1,y=out$V2,pch=16)
+
+# Teste 2
+golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr$Y,method="fixed", type="cv",gwr="local")
+
+# Teste 3
+golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr$Y,method="adaptive1", type="aic",gwr="local")
+
 
 #proc gplot data=band;
 #plot(res1*h1 res2*h2 /overlay vaxis=axis1 name="band_";
 #axis1 label=(a=90 'AICc')
 #label h1='Bandwidth'
+
