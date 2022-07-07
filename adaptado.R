@@ -84,7 +84,7 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
         while (abs(ddev)>0.00001 & i<800){
           i=i+1
           w=(u/(1+a*u))+(y-u)*(a%*%u/(1+2*a%*%u+a%*%a%*%u*u))
-          z=n+(y-u)/(w*(1+a%*%u)) - offset
+          z=n+(y-u)/(w*(1+a*u)) - t(offset)
           b=solve(t(x*w)%*%x)%*%t(x*w)%*%z
           n=x%*%b + offset
           u=exp(n)
@@ -410,7 +410,12 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
       res2=cv(h2, method=method, n=n, coord=COORD, x=x, y=y, type=type, maxd=maxd, gwr=gwr, offset=offset, distance=distance)
       npar2=res2[3]
       res2=res2[pos]
-      out <<- rbind(out, c(h1, res1, npar1, h2, res2, npar2))
+      if (type=="cv"){
+        out <<- rbind(out, c(h1, res1, h2, res2))
+      }
+      else{
+        out <<- rbind(out, c(h1, res1, npar1, h2, res2, npar2))
+      }
     }
     else{
       h3=h2
@@ -421,7 +426,12 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
       res1=cv(h1, method=method, n=n, coord=COORD, x=x, y=y, type=type, maxd=maxd, gwr=gwr, offset=offset, distance=distance)
       npar1=res1[3]
       res1=res1[pos]
-      out <<- rbind(out, c(h1, res1, npar1, h2, res2, npar2))
+      if (type=="cv"){
+        out <<- rbind(out, c(h1, res1, h2, res2))
+      }
+      else{
+        out <<- rbind(out, c(h1, res1, npar1, h2, res2, npar2))
+      }
     }
   }
   if (method=="adaptive1"){
@@ -442,7 +452,6 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
     else{
       out <<- rbind(out, c(h1, res1, npar1, h2, res2, npar2))
     }
-    
     if (g1<g2){
       xmin=h1
       npar=golden1[3]
@@ -459,12 +468,12 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
       golden = cv(xmin, method=method, n=n, coord=COORD, x=x, y=y, type=type, maxd=maxd, gwr=gwr, offset=offset, distance=distance)
       npar=golden[3]
       golden=golden[pos]
-      if(type=="cv"){
-        out <<- rbind(out, c(h1, res1, h2, res2))
-      }
-      else{
-        out <<- rbind(out, c(h1, res1, npar1, h2, res2, npar2))
-      }
+      #if(type=="cv"){
+      #  out <<- rbind(out, c(h1, res1, h2, res2))
+      #}
+      #else{
+      #  out <<- rbind(out, c(h1, res1, npar1, h2, res2, npar2))
+      #}
   }
   h1 = xmin
   res1 = golden
@@ -472,11 +481,12 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
   h2 = NA
   res2 = NA
   npar2= NA
-  out <<- rbind(out, c(h1, res1, npar1, h2, res2, npar2))
   if (type=="cv"){
+    out <<- rbind(out, c(h1, res1, h2, res2))
     print(c(golden, xmin))
   }
   else{
+    out <<- rbind(out, c(h1, res1, npar1, h2, res2, npar2))
     print(format(c(golden, xmin, npar), scientific=FALSE))
   }
   print(out)
@@ -490,7 +500,6 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
 ############### EXEMPLO ###############
 setwd('~/PIBIC/golden_section_search')
 data_gwnbr <- read.table('data_gwnbr.txt', header=T)
-golden(es.data_gwnbr$fleet, es.data_gwnbr$industry, es.data_gwnbr$Y, es.data_gwnbr$x, method="fixed", type="cv", gwr="global")
 
 print(c(mean(data_gwnbr$fleet), var(data_gwnbr$fleet)))
 hist(data_gwnbr$fleet, breaks=c(-125, 125, 375, 625, 875, 1125, 1375, 1625, 1875))
@@ -509,9 +518,8 @@ golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr
 # Teste 3
 golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr$Y,method="adaptive1", type="aic",gwr="local")
 
+# Teste 4
+golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr$Y,method="adaptive1", type="cv",gwr="local")
 
-#proc gplot data=band;
-#plot(res1*h1 res2*h2 /overlay vaxis=axis1 name="band_";
-#axis1 label=(a=90 'AICc')
-#label h1='Bandwidth'
-
+# Teste 5
+golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr$Y,method="fixed", type="aic",gwr="global")
