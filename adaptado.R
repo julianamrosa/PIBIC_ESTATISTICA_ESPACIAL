@@ -52,6 +52,7 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
             par=0.00001
           }
           par=ifelse(par<E^-10,E^-10,par)
+          par <- as.numeric(par)
           g=sum(digamma(par+y)-digamma(par)+log(par)+1-log(par+u)-(par+y)/(par+u))
           hess=sum(trigamma(par+y)-trigamma(par)+1/par-2/(par+u)+(y+par)/((par+u)*(par+u)))
           hess=ifelse(abs(hess)<E^-23,sign(hess)*E^-23,hess)
@@ -83,16 +84,17 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
         i=0
         while (abs(ddev)>0.00001 & i<800){
           i=i+1
-          w=(u/(1+a*u))+(y-u)*(a%*%u/(1+2*a%*%u+a%*%a%*%u*u))
-          z=n+(y-u)/(w*(1+a*u)) - t(offset)
-          b=solve(t(x*w)%*%x)%*%t(x*w)%*%z
+          w=(u/(1+as.numeric(a)*u))+(y-u)*(as.numeric(a)*u/(1+2*as.numeric(a)*u+as.numeric(a)^2*u*u))
+          #print(n+(y-u)/(w*(1+as.numeric(a)*u)))
+          z=n+(y-u)/(w*(1+as.numeric(a)*u)) - as.numeric(offset)
+          b=solve(t(x*as.numeric(w))%*%x)%*%t(x*as.numeric(w))%*%as.numeric(z)
           n=x%*%b + offset
           u=exp(n)
           olddev=dev
           u=ifelse(u<E^-150,E^-150,u)
           tt=y/u
           tt=ifelse(tt==0,E^-10,tt)
-          dev=2*sum(y*log(tt)-(y+1/a)*log((1+a%*%y)/(1+a%*%u)))
+          dev=2*sum(t(y*log(tt))-(y+1/a)*log((1+a%*%y)/as.numeric(1+as.numeric(a)*u)))
           ddev=dev-olddev
         }
         if (aux2>4){
@@ -278,11 +280,13 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
           Ai=(uj/(1+as.numeric(alpha)*uj))+(y-uj)*aux
           Ai=ifelse(Ai<=0,E^-5,Ai)
           zj=nj+(y-uj)/(Ai*(1+as.numeric(alpha)*uj)) - offset
-          if (det(t(x)%*%(as.numeric(wi)*as.numeric(Ai)*x))==0){
+          if (det(t(x)%*%(as.numeric(wi)*as.numeric(Ai))*x)==0){
             bi=matrix(0,ncol(x),1)
           }
           else{
-            bi=solve(t(x)%*%(as.numeric(wi*Ai)*x))%*%t(x)%*%(as.numeric(wi*Ai)*zj)
+            #print(t(x)%*%(as.numeric(wi*Ai)*x))
+            print(det(t(x)%*%(as.numeric(wi*Ai))*x))
+            bi=solve(t(x)%*%(as.numeric(wi*Ai))*x)%*%t(x)%*%(as.numeric(wi*Ai)*zj)
           }
           nj=x%*%bi + offset
           nj=ifelse(nj>E^2,E^2,nj)
@@ -523,3 +527,15 @@ golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr
 
 # Teste 5
 golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr$Y,method="fixed", type="aic",gwr="global")
+
+# Teste 6
+golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr$Y,method="fixed", type="cv",gwr="global")
+
+# Teste 7
+golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr$Y,method="adaptive1", type="aic",gwr="global")
+
+# Teste 8
+golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr$Y,method="adaptive1", type="cv",gwr="global")
+
+# Teste 9
+golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr$Y,method="fixed", type="aic",gwr="poisson")
