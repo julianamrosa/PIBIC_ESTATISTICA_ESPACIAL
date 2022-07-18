@@ -280,13 +280,15 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
           Ai=(uj/(1+as.numeric(alpha)*uj))+(y-uj)*aux
           Ai=ifelse(Ai<=0,E^-5,Ai)
           zj=nj+(y-uj)/(Ai*(1+as.numeric(alpha)*uj)) - offset
-          if (det(t(x)%*%(as.numeric(wi)*as.numeric(Ai))*x)==0){
+          if (det(t(x)%*%((as.numeric(wi*Ai))*x))==0){
             bi=matrix(0,ncol(x),1)
           }
           else{
-            #print(t(x)%*%(as.numeric(wi*Ai)*x))
-            print(det(t(x)%*%(as.numeric(wi*Ai))*x))
-            bi=solve(t(x)%*%(as.numeric(wi*Ai))*x)%*%t(x)%*%(as.numeric(wi*Ai)*zj)
+#            if (i==12){
+#              print(t(x)%*%(as.numeric(wi*Ai)*x))
+#            }
+            #bi=qr.coef(qr(t(x)%*%(as.numeric(wi*Ai)*x)), diag(2))%*%t(x)%*%(as.numeric(wi*Ai)*zj)
+            bi=solve(t(x)%*%(as.numeric(wi*Ai)*x))%*%t(x)%*%(as.numeric(wi*Ai)*zj)
           }
           nj=x%*%bi + offset
           nj=ifelse(nj>E^2,E^2,nj)
