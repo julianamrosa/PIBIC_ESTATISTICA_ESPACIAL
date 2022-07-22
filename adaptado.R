@@ -7,7 +7,11 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
     offset <- matrix(0, nrow=n, ncol=1)
   }
   x <- cbind(matrix(1, nrow=n, ncol=1), x)
-  print(c(method, type, gwr))
+  library(kableExtra)
+  tabela1 <- matrix(c(method, type, gwr), 1, 3)%>%
+    kbl(caption = "", col.names=c("method", "type", "gwr"), align=c("c", "c", "c"))%>%
+    kable_classic(full_width = F, html_font = "Cambria", position="left")
+  print(tabela1)
   distance <- dist(COORD, "euclidean")
   maxd <- max(distance)
   if (method=="adaptive1"){
@@ -28,7 +32,10 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
   }
   h1 <- h0+(1-r)*(h3-h0)
   h2 <- h0+r*(h3-h0)
-  print(c(h0, h1, h2, h3))
+  tabela2 <- matrix(c(h0, h1, h2, h3), 1, 4)%>%
+    kbl(caption = "", col.names=c("h0", "h1", "h2", "h3"), align=c("c", "c", "c", "c"))%>%
+    kable_classic(full_width = F, html_font = "Cambria", position="left")
+  print(tabela2)
   cv <- function(h, method, n, coord, x, y, type, maxd, gwr, offset, distance){
     E <- 10
     alphaii <- matrix(0, nrow=n, ncol=2)
@@ -466,11 +473,17 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
   npar2= NA
   if (type=="cv"){
     out <<- rbind(out, c(h1, res1, h2, res2))
-    print(c(golden, xmin))
+    tabela3 <- matrix(c(golden, xmin), 1, 2)%>%
+      kbl(caption = "", col.names=c("golden", "xmin"), align=c("c", "c"))%>%
+      kable_classic(full_width = F, html_font = "Cambria", position="left")
+    print(tabela3)
   }
   else{
     out <<- rbind(out, c(h1, res1, npar1, h2, res2, npar2))
-    print(format(c(golden, xmin, npar), scientific=FALSE))
+    tabela3 <- matrix(c(golden, xmin, npar), 1, 3)%>%
+      kbl(caption = "", col.names=c("golden", "xmin", "npar"), align=c("c", "c", "c"))%>%
+      kable_classic(full_width = F, html_font = "Cambria", position="left")
+    print(tabela3)
   }
   View(out)
 }
@@ -484,8 +497,12 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
 setwd('~/PIBIC/golden_section_search')
 data_gwnbr <- read.table('data_gwnbr.txt', header=T)
 
-print(c(mean(data_gwnbr$fleet), var(data_gwnbr$fleet)))
-hist(data_gwnbr$fleet, breaks=c(-125, 125, 375, 625, 875, 1125, 1375, 1625, 1875), main="", xlab="Fleet", ylab="Frequência")
+library(kableExtra)
+library(dplyr)
+matrix(c(mean(data_gwnbr$fleet), var(data_gwnbr$fleet)), 1, 2)%>%
+  kbl(caption = "Fleet Variable", col.names=c("Mean", "Variance"), align=c("c", "c")) %>%
+  kable_classic(full_width = F, html_font = "Cambria", position="left")
+hist(data_gwnbr$fleet, breaks=c(-125, 125, 375, 625, 875, 1125, 1375, 1625, 1875), main="", xlab="Fleet", ylab="Frequency")
 
 # Teste 1 - GWR=local METHOD=fixed TYPE=aic
 golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr$Y,method="fixed", type="aic",gwr="local")
