@@ -98,7 +98,7 @@ gwnbr <- function(y, x, lat, long, h, grid=NULL, latg, longg, method, gwr, offse
       else{
         ddpar <- par-parold
       }
-      print(c(aux2, aux1, i, b, a))
+      #print(c(aux2, aux1, i, b, a))
     }
     if (is.null(alphag)){
       alphag <- a
@@ -271,7 +271,7 @@ gwnbr <- function(y, x, lat, long, h, grid=NULL, latg, longg, method, gwr, offse
         }
       }
       jj <- jj+1
-      print(c(jj, bi))
+      #print(c(jj, bi))
       if (gwr=="global" | gwr=="poisson" | aux2>4 | count>3 | jj>200){
         ddpar <- E^-9
       }
@@ -281,7 +281,7 @@ gwnbr <- function(y, x, lat, long, h, grid=NULL, latg, longg, method, gwr, offse
         ddpar <- ddpar*100
         }
       }
-      print(c(j, aux1, cont, aux2, count, parold, par, ddpar))
+      #print(c(j, aux1, cont, aux2, count, parold, par, ddpar))
     }
     if (aux2>4){
       probai[i] <- 1
@@ -351,14 +351,22 @@ gwnbr <- function(y, x, lat, long, h, grid=NULL, latg, longg, method, gwr, offse
   qntl <- apply(beta_, 2, quantile, c(0.25, 0.5, 0.75))
   qntl <- rbind(qntl, qntl[3, ]-qntl[1, ])
   descriptb <- rbind(apply(beta_, 2, mean), apply(beta_, 2, min), apply(beta_, 2, max))
+  print("quantis:")
+  print(qntl)
+  print("descritivas:")
+  print(descriptb)
   vec_sebi <- c()
   for (linha in 1:nrow(sebi)){
     vec_sebi <- c(vec_sebi, sebi[linha, ])
   }
   stdbeta_ <- matrix(vec_sebi, n, byrow=T)
   qntls <- apply(stdbeta_, 2, quantile, c(0.25, 0.5, 0.75))
-  qntls <- rbind(qntls, qntl[3, ]-qntl[1, ])
+  qntls <- rbind(qntls, qntls[3, ]-qntls[1, ])
   descripts <- rbind(apply(stdbeta_, 2, mean), apply(stdbeta_, 2, min), apply(stdbeta_, 2, max))
+  print("quantis:")
+  print(qntls)
+  print("descritivas:")
+  print(descripts)
   yhat <- ifelse(yhat<E^-150, E^-150, yhat)
   tt <- y/yhat
   tt <- ifelse(tt==0, E^-10, tt)
@@ -393,7 +401,7 @@ gwnbr <- function(y, x, lat, long, h, grid=NULL, latg, longg, method, gwr, offse
   }
   if (gwr!="poisson"){
     ll <- sum(y*log(alphai*yhat)-(y+1/alphai)*log(1+alphai*yhat)+ algamma - blgamma - clgamma )
-    if (gwr=="global" & alphai!=1/parg){
+    if (gwr=="global" & alphai!=1/as.numeric(parg)){ #verificar
       npar <- sum(diag(S))
     }
     else{
@@ -424,6 +432,10 @@ gwnbr <- function(y, x, lat, long, h, grid=NULL, latg, longg, method, gwr, offse
   BIC <- npar*log(n)-2*ll
   malpha_ <- 0.05*(ncol(x)/npar)
   t_critical_ <- abs(qt(malpha_/2, n-npar))
+  print("malpha, tcritical, npar")
+  print(c(malpha_, t_critical_, npar))
+  print("gwr method ll dev pctdev adjpctdev pctll adjpctll npar aic aicc bic")
+  print(c(gwr, method, ll, dev, pctdev, adjpctdev, pctll, adjpctll, npar, AIC, AICC, BIC))
 }
 
 ### Trocas
