@@ -7,6 +7,7 @@ gwnbr <- function(y, x, lat, long, h, grid=NULL, latg, longg, method, gwr, offse
   }
   if (is.null(grid)){
     POINTS <- matrix(c(long, lat), ncol=2, byrow=F)
+    geocod_ <- geocod
   }
   else{
     POINTS <- matrix(c(longg, latg), ncol=2, byrow=F)
@@ -53,6 +54,7 @@ gwnbr <- function(y, x, lat, long, h, grid=NULL, latg, longg, method, gwr, offse
         hess <- ifelse(hess==0,E^-23,hess)
         par0 <- par
         par <- par0-solve(hess)*g
+        #par <- as.numeric(par)
         if (aux1>50 & par>E^5){
           dpar <- 0.0001
           aux2 <- aux2+1
@@ -106,6 +108,7 @@ gwnbr <- function(y, x, lat, long, h, grid=NULL, latg, longg, method, gwr, offse
     }
     bg <- b
     parg <- par
+    #print(c(alphag, bg, parg))
   }
   if (gwr=="global"){
     print(c(alphag, aux2))
@@ -114,12 +117,11 @@ gwnbr <- function(y, x, lat, long, h, grid=NULL, latg, longg, method, gwr, offse
   aux2 <- 0
   library(rdist)
   distance <- cdist(POINTS, COORD, "euclidean")
-  print(distance)
-  seq <- 1:n
+  sequ <- 1:n
   for (i in 1:m){
     seqi <- matrix(i,nrow=n,ncol=1)
-    distan <- cbind(cbind(seqi, seq), as.matrix(distance)[,i])
-    w <- matrix(0,u,1)
+    distan <- cbind(cbind(seqi, sequ), as.matrix(distance)[,i])
+    w <- matrix(0,n,1)
     if (method=="fixed"){
       for (jj in 1:n){
         w[jj] <- exp(-0.5*(distan[jj,3]/h)^2)
@@ -141,7 +143,7 @@ gwnbr <- function(y, x, lat, long, h, grid=NULL, latg, longg, method, gwr, offse
       distan <- cbind(distan,1:n)
       hn <- distan[h,3]
       for (jj in 1:n){
-        if (distan[jj,4]<= h){
+        if (distan[jj,4] <= h){
           w[jj,1] <- (1-(distan[jj,3]/hn)^2)^2
         }
         else{
@@ -235,44 +237,202 @@ gwnbr <- function(y, x, lat, long, h, grid=NULL, latg, longg, method, gwr, offse
       dev <- 0
       ddev <- 1
       cont <- 0
+      while (abs(ddev)>0.000001 & cont<800){
+        cont <- cont+1
+        #uj <- ifelse(uj>E^100,E^100,uj)
+        aux <- (as.numeric(alpha)*uj/(1+2*as.numeric(alpha)*uj+as.numeric(alpha%*%alpha)*uj*uj))
+        Ai <- (uj/(1+as.numeric(alpha)*uj))+(y-uj)*aux
+        Ai <- ifelse(Ai<=0,E^-5,Ai)
+        zj <- nj+(y-uj)/(Ai*(1+as.numeric(alpha)*uj)) - offset
+        if (det(t(x)%*%((as.numeric(wi*Ai))*x))<1){
+          bi <- matrix(0,ncol(x),1)
+        }
+        else{
+          bi <- solve(t(x)%*%(as.numeric(wi*Ai)*x))%*%t(x)%*%(as.numeric(wi*Ai)*zj)
+        }
+        nj <- x%*%bi + offset
+        nj <- ifelse(nj>E^2,E^2,nj)
+        uj <- exp(nj)
+        olddev <- dev
+        uj <- ifelse(uj<E^-150,E^-150,uj)
+        tt <- y/uj
+        tt <- ifelse(tt==0,E^-10,tt)
+        if (gwr=="poisson"){
+          dev <- 2*sum(y*log(tt)-(y-uj))
+        }
+        else{
+          dev <- 2*sum(y*log(tt)-(y+1/alpha)*log((1+alpha*y)/(1+as.numeric(alpha)*uj)))
+        }
+        if (cont>100){
+          ddev <- 0.0000001
+        }
+        else{
+          ddev <- dev-olddev
+        }
+      }
+      jj <- jj+1
+      print(c(jj, bi))
+      if (gwr=="global" | gwr=="poisson" | aux2>4 | count>3 | jj>200){
+        ddpar <- E^-9
+      }
+      else{
+        ddpar <- par-parold
+        if (par<E^-3){
+        ddpar <- ddpar*100
+        }
+      }
+      print(c(j, aux1, cont, aux2, count, parold, par, ddpar))
     }
-    while (abs(ddev)>0.000001 & cont<800){
-      cont <- cont+1
-      uj <- ifelse(uj>E^100,E^100,uj)
-      aux <- (as.numeric(alpha)*uj/(1+2*as.numeric(alpha)*uj+as.numeric(alpha%*%alpha)*uj*uj))
-      Ai <- (uj/(1+as.numeric(alpha)*uj))+(y-uj)*aux
-      Ai <- ifelse(Ai<=0,E^-5,Ai)
-      zj <- nj+(y-uj)/(Ai*(1+as.numeric(alpha)*uj)) - offset
-      if (det(t(x)%*%((as.numeric(wi*Ai))*x))<1){
-        bi <- matrix(0,ncol(x),1)
+    if (aux2>4){
+      probai[i] <- 1
+    }
+    if (count>3){
+      probai[i] <- 2
+    }
+    Ai2 <- (uj/(1+as.numeric(alpha)*uj))+(y-uj)*(as.numeric(alpha)*uj/(1+2*as.numeric(alpha)*uj+as.numeric(alpha*alpha)*uj*uj))
+    if (all(apply(Ai2, 2, min)<E^-5)){
+      probbi[i] <- 1
+      Ai2 <- ifelse(Ai2<E^-5,E^-5,Ai2)
+    }
+    if (is.null(grid)){
+      if (det(t(x)%*%(as.numeric(wi*Ai)*x))<1){
+        S[i,] <- matrix(0,1,n)
       }
       else{
-        bi <- solve(t(x)%*%(as.numeric(wi*Ai)*x))%*%t(x)%*%(as.numeric(wi*Ai)*zj)
-      }
-      nj <- x%*%bi + offset
-      nj <- ifelse(nj>E^2,E^2,nj)
-      uj <- exp(nj)
-      olddev <- dev
-      uj <- ifelse(uj<E^-150,E^-150,uj)
-      tt <- y/uj
-      tt <- ifelse(tt==0,E^-10,tt)
-      if (gwr=="poisson"){
-        dev <- 2*sum(y*log(tt)-(y-uj))
-      }
-      else{
-        dev <- 2*sum(y*log(tt)-(y+1/alpha)*log((1+alpha*y)/(1+as.numeric(alpha)*uj)))
-      }
-      if (cont>100){
-        ddev <- 0.0000001
-      }
-      else{
-        ddev <- dev-olddev
+        S[i,] <- x[i,]%*%solve(t(x)%*%(as.numeric(wi*Ai)*x))%*%t(x*as.numeric(wi*Ai))
       }
     }
-    jj <- jj+1
-    print(c(jj, bi))
+    C <- solve(t(x)%*%(as.numeric(wi*Ai)*x))
+    varb <- C
+    seb <- sqrt(diag(varb))
+    if (gwr!="poisson"){
+      ser <- sqrt(1/abs(hess))
+      r <- 1/alpha
+      sealpha <- ser/(r^2)
+      sealphai[i, 1] <- sealpha
+      alphaii[i, 2] <- i
+      alphaii[i, 2] <- alpha
+    }
+    m1 <- (i-1)*ncol(x)+1
+    m2 <- m1+(ncol(x)-1)
+    sebi[m1:m2, 1] <- seb
+    bii[m1:m2, 1] <- i
+    bii[m1:m2, 2] <- bi
+    xcoord[m1:m2, 1] <- POINTS[i, 1]
+    ycoord[m1:m2, 1] <- POINTS[i, 2]
+    #print(geocod_)
+    #print(geocod)
+    geocod[m1:m2, 1] <- geocod_[i]
+    if (is.null(grid)){ #obs.: testar se grid==data?
+      yhat[i] <- uj[i]
+    }
   }
+  tstat <- bii[, 2]/sebi
+  probtstat <- 2*(1-pnorm(abs(tstat)))
+  if (gwr!="poisson"){
+    atstat <- alphaii[, 2]/sealphai
+    aprobtstat <- 2*(1-pnorm(abs(atstat)))
+  }
+  else{
+    atstat <- matrix(0, n, 1)
+    aprobtstat <- matrix(1, n, 1)
+  }
+  b <- bii[, 2]
+  alphai <- alphaii[, 2]
+  id_ <- bii[, 1]
+  ida_ <- alphaii[, 1]
+  vec_bii <- c()
+  for (linha in 1:nrow(bii)){
+    vec_bii <- c(vec_bii, bii[, 1:2][linha, ])
+  }
+  beta_ <- matrix(vec_bii, n, byrow=T)
+  i <- seq(2, ncol(beta_), 2)
+  beta_ <- beta_[, i]
+  qntl <- apply(beta_, 2, quantile, c(0.25, 0.5, 0.75))
+  qntl <- rbind(qntl, qntl[3, ]-qntl[1, ])
+  descriptb <- rbind(apply(beta_, 2, mean), apply(beta_, 2, min), apply(beta_, 2, max))
+  vec_sebi <- c()
+  for (linha in 1:nrow(sebi)){
+    vec_sebi <- c(vec_sebi, sebi[linha, ])
+  }
+  stdbeta_ <- matrix(vec_sebi, n, byrow=T)
+  qntls <- apply(stdbeta_, 2, quantile, c(0.25, 0.5, 0.75))
+  qntls <- rbind(qntls, qntl[3, ]-qntl[1, ])
+  descripts <- rbind(apply(stdbeta_, 2, mean), apply(stdbeta_, 2, min), apply(stdbeta_, 2, max))
+  yhat <- ifelse(yhat<E^-150, E^-150, yhat)
+  tt <- y/yhat
+  tt <- ifelse(tt==0, E^-10, tt)
+  if (gwr=="poisson"){
+    dev <- 2*sum(y*log(tt)-(y-yhat))
+    tt2 <- y/mean(y)
+    tt2 <- ifelse(tt2==0, E^-10, tt2)
+    devnull <- 2*sum(y*log(tt2)-(y-mean(y)))
+    pctdev <- 1-dev/devnull
+  }
+  else{
+    dev <- 2*sum(y*log(tt)-(y+1/alphai)*log((1+alphai*y)/(1+as.numeric(alphai)*yhat)))
+    tt2 <- y/mean(y)
+    tt2 <- ifelse(tt2==0, E^-10, tt2)
+    devnull <- 2*sum(y*log(tt2)-(y+1/alphai)*log((1+alphai*y)/(1+as.numeric(alphai)*mean(y))))
+    pctdev <- 1-dev/devnull
+  }
+  if (gwr!="poisson"){
+    a2 <- y+1/alphai
+    b2 <- 1/alphai
+    algamma <- matrix(0, n, 1)
+    blgamma <- matrix(0, n, 1)
+    for (i in 1:length(y)){
+      algamma[i] <- lgamma(a2[i])
+      blgamma[i] <- lgamma(b2[i])
+    }
+  }
+  c2 <- y+1
+  clgamma <- matrix(0, n, 1)
+  for (i in 1:length(y)){
+    clgamma[i] <- lgamma(c2[i])
+  }
+  if (gwr!="poisson"){
+    ll <- sum(y*log(alphai*yhat)-(y+1/alphai)*log(1+alphai*yhat)+ algamma - blgamma - clgamma )
+    if (gwr=="global" & alphai!=1/parg){
+      npar <- sum(diag(S))
+    }
+    else{
+      npar <- sum(diag(S))+1
+    }
+    tt <- y/(alphai*yhat)
+    tt <- ifelse(tt==0, E^-10, tt)
+    ll1 <- sum(y*log(tt)-y+(y+1/alphai)*log(1+alphai*yhat)-algamma+blgamma)
+    tt2 <- y/mean(y)
+    tt2 <- ifelse(tt2==0, E^-10, tt2)
+    llnull <- sum(y*log(tt2))
+    pctll <- 1-ll1/llnull
+  }
+  else{
+    ll <- sum(-yhat+y*log(yhat)-clgamma)
+    npar <- sum(diag(S))
+    pctll <- pctdev
+  }
+  adjpctdev <- 1-((length(y)-1)/(length(y)-npar))*(1-pctdev)
+  adjpctll <- 1-((length(y)-1)/(length(y)-npar))*(1-pctll)
+  resord <- y-yhat
+  sigma2 <- (resord*resord)/(n-npar)
+  sii <- diag(S) #se necessário, matriz coluna
+  res <- resord/sqrt(sigma2*(1-sii))
+  res <- cbind(unique(id_), COORD[, 1], COORD[, 2], y, yhat, res, resord)
+  AIC <- 2*npar-2*ll
+  AICC <- AIC +(2*npar*(npar+1))/(n-npar-1)
+  BIC <- npar*log(n)-2*ll
+  malpha_ <- 0.05*(ncol(x)/npar)
+  t_critical_ <- abs(qt(malpha_/2, n-npar))
 }
+
+### Trocas
+# _dist_ ---> distance
+# seq ---> sequ
+# dist ---> distan
+# _id_ ---> id_
+# _ida_ ---> ida_
+# _beta_ ---> beta_
 
 setwd('~/PIBIC/golden_section_search')
 data_gwnbr <- read.table('data_gwnbr.txt', header=T)
