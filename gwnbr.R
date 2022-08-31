@@ -423,7 +423,7 @@ gwnbr <- function(y, x, lat, long, h, grid=NULL, latg, longg, method, gwr, offse
   adjpctdev <- 1-((length(y)-1)/(length(y)-npar))*(1-pctdev)
   adjpctll <- 1-((length(y)-1)/(length(y)-npar))*(1-pctll)
   resord <- y-yhat
-  sigma2 <- (resord*resord)/(n-npar)
+  sigma2 <- (t(resord)%*%resord)/(n-npar)
   sii <- diag(S) #se necessário, matriz coluna
   res <- resord/sqrt(sigma2*(1-sii))
   res <- cbind(unique(id_), COORD[, 1], COORD[, 2], y, yhat, res, resord)
@@ -436,6 +436,63 @@ gwnbr <- function(y, x, lat, long, h, grid=NULL, latg, longg, method, gwr, offse
   print(c(malpha_, t_critical_, npar))
   print("gwr method ll dev pctdev adjpctdev pctll adjpctll npar aic aicc bic")
   print(c(gwr, method, ll, dev, pctdev, adjpctdev, pctll, adjpctll, npar, AIC, AICC, BIC))
+  res_ <<- as.data.frame(res)
+  names(res_) <<- c("_id_", "xcoord", "ycoord", "yobs", "yhat", "res", "resraw")
+  View(res_)
+  stat <- cbind(ll, dev, pctdev, adjpctdev, pctll, adjpctll, npar, AIC, AICC, BIC)
+  stat_ <<- as.data.frame(stat)
+  View(stat_)
+  bbeta <- cbind(id_, geocod, xcoord, ycoord, b, sebi, tstat, probtstat)
+  bbeta_ <<- as.data.frame(bbeta)
+  names(bbeta_) <<- c("_id_", "geocod", "xcoord", "ycoord", "b", "sebi", "tstat", "probtstat")
+  View(bbeta_)
+  xcoord <- COORD[, 1]
+  ycoord <- COORD[, 2]
+  geocod <- t(unique(geocod))
+  sig_alpha <- matrix("not significant at 90%", n, 1)
+  v1 <- npar
+  for (i in 1:n){
+    if (aprobtstat[i]<0.01*(ncol(x)/v1)){
+      sig_alpha[i] <- "significant at 95%"
+    }
+    else if (aprobtstat[i]<0.1*(ncol(x)/v1)){
+      sig_alpha[i] <- "significant at 90%"
+    }
+    else{
+      sig_alpha[i] <- "not significant at 90%"
+    }
+  }
+  aalpha <- cbind(ida_, geocod, xcoord, ycoord, alphai, sealphai, atstat, aprobtstat, sig_alpha, probai, probbi)
+  alpha_ <<- as.data.frame(aalpha)
+  names(alpha_) <<- c("_id_", "geocod", "xcoord", "ycoord", "alphai", "sealphai", "atstat", "aprobtstat", "sig_alpha", "probai", "probbi")
+  View(alpha_)
+  tstat_ <- beta_/stdbeta_
+  probt_ <- 2*(1-pnorm(abs(tstat_)))
+  bistdt_ <- cbind(geocod_, COORD, beta_, stdbeta_, tstat_, probt_)
+  parameters_ <<- as.data.frame(bistdt_)
+  names(parameters_) <<- c("geocod", "x", "y", "Intercept", "INDUSTRY", "std_Intercept", "std_INDUSTRY", "tstat_Intercept", "tstat_INDUSTRY", "probt_Intercept", "probt_INDUSTRY")
+  View(parameters_)
+  sig_ <- matrix("not significant at 90%", n, ncol(x))
+  v1 <- npar
+  for (i in 1:n){
+    for (j in 1:ncol(x)){
+      if (probt_[i, j]<0.01*(ncol(x)/v1)){
+        sig_[i, j] <- "significant at 99%"
+      }
+      else if (probt_[i, j]<0.05*(ncol(x)/v1)){
+        sig_[i, j] <- "significant at 95%"
+      }
+      else if (probt_[i, j]<0.1*(ncol(x)/v1)){
+        sig_[i, j] <- "significant at 90%"
+      }
+      else{
+        sig_[i, j] <- "not significant at 90%"
+      }
+    }
+  }
+  sig_parameters2_ <<- as.data.frame(sig_)
+  names(sig_parameters2_) <<- c("sig_Intercept", "sig_INDUSTRY")
+  View(sig_parameters2_)
 }
 
 ### Trocas
