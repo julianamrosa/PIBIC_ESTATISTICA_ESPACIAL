@@ -310,7 +310,7 @@ gwnbr <- function(y, x, lat, long, h, grid=NULL, latg, longg, method, gwr, offse
       r <- 1/alpha
       sealpha <- ser/(r^2)
       sealphai[i, 1] <- sealpha
-      alphaii[i, 2] <- i
+      alphaii[i, 1] <- i
       alphaii[i, 2] <- alpha
     }
     m1 <- (i-1)*ncol(x)+1
@@ -320,8 +320,6 @@ gwnbr <- function(y, x, lat, long, h, grid=NULL, latg, longg, method, gwr, offse
     bii[m1:m2, 2] <- bi
     xcoord[m1:m2, 1] <- POINTS[i, 1]
     ycoord[m1:m2, 1] <- POINTS[i, 2]
-    #print(geocod_)
-    #print(geocod)
     geocod[m1:m2, 1] <- geocod_[i]
     if (is.null(grid)){ #obs.: testar se grid==data?
       yhat[i] <- uj[i]
@@ -401,7 +399,7 @@ gwnbr <- function(y, x, lat, long, h, grid=NULL, latg, longg, method, gwr, offse
   }
   if (gwr!="poisson"){
     ll <- sum(y*log(alphai*yhat)-(y+1/alphai)*log(1+alphai*yhat)+ algamma - blgamma - clgamma )
-    if (gwr=="global" & alphai!=1/as.numeric(parg)){ #verificar
+    if (gwr=="global" & all(alphai!=1/as.numeric(parg))){ #verificar
       npar <- sum(diag(S))
     }
     else{
@@ -424,7 +422,7 @@ gwnbr <- function(y, x, lat, long, h, grid=NULL, latg, longg, method, gwr, offse
   adjpctll <- 1-((length(y)-1)/(length(y)-npar))*(1-pctll)
   resord <- y-yhat
   sigma2 <- (t(resord)%*%resord)/(n-npar)
-  sii <- diag(S) #se necessário, matriz coluna
+  sii <- diag(S) #se necess?rio, matriz coluna
   res <- resord/sqrt(sigma2*(1-sii))
   res <- cbind(unique(id_), COORD[, 1], COORD[, 2], y, yhat, res, resord)
   AIC <- 2*npar-2*ll
@@ -462,9 +460,9 @@ gwnbr <- function(y, x, lat, long, h, grid=NULL, latg, longg, method, gwr, offse
       sig_alpha[i] <- "not significant at 90%"
     }
   }
-  aalpha <- cbind(ida_, geocod, xcoord, ycoord, alphai, sealphai, atstat, aprobtstat, sig_alpha, probai, probbi)
+  aalpha <- cbind(ida_, as.numeric(geocod), xcoord, ycoord, alphai, as.numeric(sealphai), as.numeric(atstat), aprobtstat, sig_alpha, probai, probbi)
   alpha_ <<- as.data.frame(aalpha)
-  names(alpha_) <<- c("_id_", "geocod", "xcoord", "ycoord", "alphai", "sealphai", "atstat", "aprobtstat", "sig_alpha", "probai", "probbi")
+  names(alpha_) <<- c("_ida_", "geocod", "xcoord", "ycoord", "alphai", "sealphai", "atstat", "aprobtstat", "sig_alpha", "probai", "probbi")
   View(alpha_)
   tstat_ <- beta_/stdbeta_
   probt_ <- 2*(1-pnorm(abs(tstat_)))
@@ -508,3 +506,36 @@ data_gwnbr <- read.table('data_gwnbr.txt', header=T)
 
 #Exemplo 1
 gwnbr(y=data_gwnbr$fleet, x=data_gwnbr$industry, lat=data_gwnbr$Y, long=data_gwnbr$x, h=0.3344601, gwr="local", method="fixed", geocod=data_gwnbr$geocod)
+
+#Exemplo 2
+gwnbr(y=data_gwnbr$fleet, x=data_gwnbr$industry, lat=data_gwnbr$Y, long=data_gwnbr$x, h=53.200292, gwr="local", method="fixed", geocod=data_gwnbr$geocod)
+
+#Exemplo 3
+gwnbr(y=data_gwnbr$fleet, x=data_gwnbr$industry, lat=data_gwnbr$Y, long=data_gwnbr$x, h=18, gwr="local", method="adaptive1", geocod=data_gwnbr$geocod)
+
+#Exemplo 4
+gwnbr(y=data_gwnbr$fleet, x=data_gwnbr$industry, lat=data_gwnbr$Y, long=data_gwnbr$x, h=49, gwr="local", method="adaptive1", geocod=data_gwnbr$geocod)
+
+#Exemplo 5
+gwnbr(y=data_gwnbr$fleet, x=data_gwnbr$industry, lat=data_gwnbr$Y, long=data_gwnbr$x, h=53.068412, gwr="global", method="fixed", geocod=data_gwnbr$geocod)
+
+#Exemplo 6
+gwnbr(y=data_gwnbr$fleet, x=data_gwnbr$industry, lat=data_gwnbr$Y, long=data_gwnbr$x, h=53.2, gwr="global", method="fixed", geocod=data_gwnbr$geocod)
+
+#Exemplo 7
+gwnbr(y=data_gwnbr$fleet, x=data_gwnbr$industry, lat=data_gwnbr$Y, long=data_gwnbr$x, h=34, gwr="global", method="adaptive1", geocod=data_gwnbr$geocod)
+
+#Exemplo 8
+gwnbr(y=data_gwnbr$fleet, x=data_gwnbr$industry, lat=data_gwnbr$Y, long=data_gwnbr$x, h=49, gwr="global", method="adaptive1", geocod=data_gwnbr$geocod)
+
+#Exemplo 9
+gwnbr(y=data_gwnbr$fleet, x=data_gwnbr$industry, lat=data_gwnbr$Y, long=data_gwnbr$x, h=9.3796134, gwr="poisson", method="fixed", geocod=data_gwnbr$geocod)
+
+#Exemplo 10
+gwnbr(y=data_gwnbr$fleet, x=data_gwnbr$industry, lat=data_gwnbr$Y, long=data_gwnbr$x, h=28.5, gwr="poisson", method="fixed", geocod=data_gwnbr$geocod)
+
+#Exemplo 11
+gwnbr(y=data_gwnbr$fleet, x=data_gwnbr$industry, lat=data_gwnbr$Y, long=data_gwnbr$x, h=5, gwr="poisson", method="adaptive1", geocod=data_gwnbr$geocod)
+
+#Exemplo 12
+gwnbr(y=data_gwnbr$fleet, x=data_gwnbr$industry, lat=data_gwnbr$Y, long=data_gwnbr$x, h=41, gwr="poisson", method="adaptive1", geocod=data_gwnbr$geocod)
