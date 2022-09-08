@@ -487,6 +487,18 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
     print(tabela3)
   }
   View(out)
+  library(ggplot2)
+  ggplot(out,aes(x=as.numeric(h1),y=as.numeric(res1))) + geom_point(colour="red",alpha=0.5,size=3) +
+    scale_y_continuous() + 
+    scale_x_continuous() + 
+    geom_point(aes(x=as.numeric(h2),y=as.numeric(res2)),colour="darkblue",alpha=.5,size=3) + 
+    labs(x= "Bandwidth", y=if(type=="aic"){"AICc"}else{"Cross-Validation Score"}) +
+    theme_test() +
+    theme(axis.title.y=element_text(colour="black", size=12),
+          axis.title.x = element_text(colour="black", size=12),
+          axis.text = element_text(colour = "black", size=9.5),
+          panel.border = element_blank(),
+          axis.line = element_line(colour = "black"))
 }
 
 ### Trocas
@@ -509,172 +521,42 @@ library(tidyverse)
 ############### TESTS AND PLOTS #################
 # Test 1 - GWR=local METHOD=fixed TYPE=aic
 golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr$Y,method="fixed", type="aic",gwr="local")
-ggplot(out,aes(x=as.numeric(h1),y=as.numeric(res1))) + geom_point(colour="red",alpha=0.5,size=3) +
-  scale_y_continuous() + 
-  scale_x_continuous() + 
-  geom_point(aes(x=as.numeric(h2),y=as.numeric(res2)),colour="darkblue",alpha=.5,size=3) + 
-  labs(x= "Bandwidth", y="AICc") +
-  theme_test() +
-  theme(axis.title.y=element_text(colour="black", size=12),
-        axis.title.x = element_text(colour="black", size=12),
-        axis.text = element_text(colour = "black", size=9.5),
-        panel.border = element_blank(),
-        axis.line = element_line(colour = "black"))
 
 
 # Test 2 - GWR=local METHOD=fixed TYPE=cv
 golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr$Y,method="fixed", type="cv",gwr="local")
-ggplot(out,aes(x=as.numeric(h1),y=as.numeric(res1))) + geom_point(colour="red",alpha=0.5,size=3) +
-  scale_y_continuous() + 
-  scale_x_continuous() + 
-  geom_point(aes(x=as.numeric(h2),y=as.numeric(res2)),colour="darkblue",alpha=.5,size=3) + 
-  labs(x= "Bandwidth", y="Cross-Validation Score") +
-  theme_test() +
-  theme(axis.title.y=element_text(colour="black", size=12),
-        axis.title.x = element_text(colour="black", size=12),
-        axis.text = element_text(colour = "black", size=9.5),
-        panel.border = element_blank(),
-        axis.line = element_line(colour = "black"))
 
 # Test 3 - GWR=local METHOD=adaptive1 TYPE=aic
 golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr$Y,method="adaptive1", type="aic",gwr="local")
-ggplot(out,aes(x=as.numeric(h1),y=as.numeric(res1))) + geom_point(colour="red",alpha=0.5,size=3) +
-  scale_y_continuous() + 
-  scale_x_continuous() + 
-  geom_point(aes(x=as.numeric(h2),y=as.numeric(res2)),colour="darkblue",alpha=.5,size=3) + 
-  labs(x= "Bandwidth", y="AICc") +
-  theme_test() +
-  theme(axis.title.y=element_text(colour="black", size=12),
-        axis.title.x = element_text(colour="black", size=12),
-        axis.text = element_text(colour = "black", size=9.5),
-        panel.border = element_blank(),
-        axis.line = element_line(colour = "black"))
 
 # Test 4 - GWR=local METHOD=adaptive1 TYPE=cv
 golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr$Y,method="adaptive1", type="cv",gwr="local")
-ggplot(out,aes(x=as.numeric(h1),y=as.numeric(res1))) + geom_point(colour="red",alpha=0.5,size=3) +
-  scale_y_continuous() + 
-  scale_x_continuous() + 
-  geom_point(aes(x=as.numeric(h2),y=as.numeric(res2)),colour="darkblue",alpha=.5,size=3) + 
-  labs(x= "Bandwidth", y="Cross-Validation Score") +
-  theme_test() +
-  theme(axis.title.y=element_text(colour="black", size=12),
-        axis.title.x = element_text(colour="black", size=12),
-        axis.text = element_text(colour = "black", size=9.5),
-        panel.border = element_blank(),
-        axis.line = element_line(colour = "black"))
 
 # Test 5 - GWR=global METHOD=fixed TYPE=aic
 golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr$Y,method="fixed", type="aic",gwr="global")
-ggplot(out,aes(x=as.numeric(h1),y=as.numeric(res1))) + geom_point(colour="red",alpha=0.5,size=3) +
-  scale_y_continuous() + 
-  scale_x_continuous() + 
-  geom_point(aes(x=as.numeric(h2),y=as.numeric(res2)),colour="darkblue",alpha=.5,size=3) + 
-  labs(x= "Bandwidth", y="AICc") +
-  theme_test() +
-  theme(axis.title.y=element_text(colour="black", size=12),
-        axis.title.x = element_text(colour="black", size=12),
-        axis.text = element_text(colour = "black", size=9.5),
-        panel.border = element_blank(),
-        axis.line = element_line(colour = "black"))
 
 # Test 6 - GWR=global METHOD=fixed TYPE=cv
 golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr$Y,method="fixed", type="cv",gwr="global")
-ggplot(out,aes(x=as.numeric(h1),y=as.numeric(res1))) + geom_point(colour="red",alpha=0.5,size=3) +
-  scale_y_continuous() + 
-  scale_x_continuous() + 
-  geom_point(aes(x=as.numeric(h2),y=as.numeric(res2)),colour="darkblue",alpha=.5,size=3) + 
-  labs(x= "Bandwidth", y="Cross-Validation Score") +
-  theme_test() +
-  theme(axis.title.y=element_text(colour="black", size=12),
-        axis.title.x = element_text(colour="black", size=12),
-        axis.text = element_text(colour = "black", size=9.5),
-        panel.border = element_blank(),
-        axis.line = element_line(colour = "black"))
 
 
 # Test 7 - GWR=global METHOD=adaptive1 TYPE=aic
 golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr$Y,method="adaptive1", type="aic",gwr="global")
-ggplot(out,aes(x=as.numeric(h1),y=as.numeric(res1))) + geom_point(colour="red",alpha=0.5,size=3) +
-  scale_y_continuous() + 
-  scale_x_continuous() + 
-  geom_point(aes(x=as.numeric(h2),y=as.numeric(res2)),colour="darkblue",alpha=.5,size=3) + 
-  labs(x= "Bandwidth", y="AICc") +
-  theme_test() +
-  theme(axis.title.y=element_text(colour="black", size=12),
-        axis.title.x = element_text(colour="black", size=12),
-        axis.text = element_text(colour = "black", size=9.5),
-        panel.border = element_blank(),
-        axis.line = element_line(colour = "black"))
 
 # Test 8 - GWR=global METHOD=adaptive1 TYPE=cv
 golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr$Y,method="adaptive1", type="cv",gwr="global")
-ggplot(out,aes(x=as.numeric(h1),y=as.numeric(res1))) + geom_point(colour="red",alpha=0.5,size=3) +
-  scale_y_continuous() + 
-  scale_x_continuous() + 
-  geom_point(aes(x=as.numeric(h2),y=as.numeric(res2)),colour="darkblue",alpha=.5,size=3) + 
-  labs(x= "Bandwidth", y="Cross-Validation Score") +
-  theme_test() +
-  theme(axis.title.y=element_text(colour="black", size=12),
-        axis.title.x = element_text(colour="black", size=12),
-        axis.text = element_text(colour = "black", size=9.5),
-        panel.border = element_blank(),
-        axis.line = element_line(colour = "black"))
 
 # Test 9 - GWR=poisson METHOD=fixed TYPE=aic
 # ta ficando um pouco diferente do plot do professor
 golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr$Y,method="fixed", type="aic",gwr="poisson")
-ggplot(out,aes(x=as.numeric(h1),y=as.numeric(res1))) + geom_point(colour="red",alpha=0.5,size=3) +
-  scale_y_continuous() + 
-  scale_x_continuous() + 
-  geom_point(aes(x=as.numeric(h2),y=as.numeric(res2)),colour="darkblue",alpha=.5,size=3) + 
-  labs(x= "Bandwidth", y="AICc") +
-  theme_test() +
-  theme(axis.title.y=element_text(colour="black", size=12),
-        axis.title.x = element_text(colour="black", size=12),
-        axis.text = element_text(colour = "black", size=9.5),
-        panel.border = element_blank(),
-        axis.line = element_line(colour = "black"))
 
 # Test 10 - GWR=poisson METHOD=fixed TYPE=cv
 golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr$Y,method="fixed", type="cv",gwr="poisson")
-ggplot(out,aes(x=as.numeric(h1),y=as.numeric(res1))) + geom_point(colour="red",alpha=0.5,size=3) +
-  scale_y_continuous() + 
-  scale_x_continuous() + 
-  geom_point(aes(x=as.numeric(h2),y=as.numeric(res2)),colour="darkblue",alpha=.5,size=3) + 
-  labs(x= "Bandwidth", y="Cross-Validation Score") +
-  theme_test() +
-  theme(axis.title.y=element_text(colour="black", size=12),
-        axis.title.x = element_text(colour="black", size=12),
-        axis.text = element_text(colour = "black", size=9.5),
-        panel.border = element_blank(),
-        axis.line = element_line(colour = "black"))
 
 # Test 11 - GWR=poisson METHOD=adaptive1 TYPE=aic
 golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr$Y,method="adaptive1", type="aic",gwr="poisson")
-ggplot(out,aes(x=as.numeric(h1),y=as.numeric(res1))) + geom_point(colour="red",alpha=0.5,size=3) +
-  scale_y_continuous() + 
-  scale_x_continuous() + 
-  geom_point(aes(x=as.numeric(h2),y=as.numeric(res2)),colour="darkblue",alpha=.5,size=3) + 
-  labs(x= "Bandwidth", y="AICc") +
-  theme_test() +
-  theme(axis.title.y=element_text(colour="black", size=12),
-        axis.title.x = element_text(colour="black", size=12),
-        axis.text = element_text(colour = "black", size=9.5),
-        panel.border = element_blank(),
-        axis.line = element_line(colour = "black"))
 
 
 # Test 12 - GWR=poisson METHOD=adaptive1 TYPE=cv
 golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr$Y,method="adaptive1", type="cv",gwr="poisson")
-ggplot(out,aes(x=as.numeric(h1),y=as.numeric(res1))) + geom_point(color="red",alpha=0.5,size=3) +
-  scale_y_continuous() + 
-  scale_x_continuous() +
-  geom_point(aes(x=as.numeric(h2),y=as.numeric(res2)),color="darkblue",alpha=.5,size=3) + 
-  labs(x= "Bandwidth", y="Cross-Validation Score") +
-  theme_test() +
-  theme(axis.title.y=element_text(colour="black", size=12),
-        axis.title.x = element_text(colour="black", size=12),
-        axis.text = element_text(colour = "black", size=9.5),
-        panel.border = element_blank(),
-        axis.line = element_line(colour = "black"))
+
+## outliers: exemplos 2, 4, 6, 8, 10, 12
