@@ -15,9 +15,20 @@ q3 <- quantile(c(as.numeric(out$res1), as.numeric(out$res2)), 0.75, na.rm=T)
 iqr <- q3-q1
 
 par(mgp = c(1.5, 0.4, 0), tcl = -0.25, mar=c(3, 2.4, 1.3, 0.6))
-plot(x=as.numeric(out$h1), y=ifelse(rep(sum(c(as.numeric(out$res1), as.numeric(out$res2))<=q1-1.5*iqr | c(as.numeric(out$res1), as.numeric(out$res2))>=q3+1.5*iqr)>0, length(out$res1)), log10(as.numeric(out$res1)), as.numeric(out$res1)), type="p", pch=ifelse(out$res1[!is.na(out$res1)]==min(c(out$res1[!is.na(out$res1)], out$res1[!is.na(out$res2)])), 17, 19), yaxt="n", xaxt = "n", xlab="Bandwidth", ylab="aic",
-     cex.main=1, cex.lab=0.9, cex.axis=0.7, col=rgb(red = 1, green = 0, blue = 0, alpha = 0.5), cex=1.3, alpha=0.5)
-points(x=as.numeric(out$h2), y=ifelse(rep(sum(c(as.numeric(out$res1), as.numeric(out$res2))<=q1-1.5*iqr | c(as.numeric(out$res1), as.numeric(out$res2))>=q3+1.5*iqr)>0, length(out$res2)), log10(as.numeric(out$res2)), as.numeric(out$res2)), type="p", pch=ifelse(out$res1[!is.na(out$res1)]==min(c(out$res1[!is.na(out$res1)], out$res1[!is.na(out$res2)])), 17, 19),
+plot(x=as.numeric(out$h1), y=if(sum(c(as.numeric(out$res1[!is.na(out$res1)]),
+                                      as.numeric(out$res2[!is.na(out$res2)]))<=q1-1.5*iqr
+                                    | c(as.numeric(out$res1[!is.na(out$res1)]),
+                                        as.numeric(out$res2[!is.na(out$res2)]))>=q3+1.5*iqr)>0){log10(as.numeric(out$res1)); logaritmo <- TRUE}else{as.numeric(out$res1) logaritmo <- FALSE},
+type="p", pch=ifelse(out$res1[!is.na(out$res1)]==min(c(out$res1[!is.na(out$res1)],
+                                                       out$res2[!is.na(out$res2)])), 17, 19),
+yaxt="n", xaxt = "n", xlab="Bandwidth", ylab="aic",
+     cex.main=1, cex.lab=0.9, cex.axis=0.7,
+     col=rgb(red = 1, green = 0, blue = 0, alpha = 0.5),
+     cex=1.3, alpha=0.5)
+points(x=as.numeric(out$h2), y=if(sum(c(as.numeric(out$res1[!is.na(out$res1)]),
+                                        as.numeric(out$res2[!is.na(out$res2)]))<=q1-1.5*iqr
+                                      | c(as.numeric(out$res1[!is.na(out$res1)]),
+                                          as.numeric(out$res2[!is.na(out$res2)]))>=q3+1.5*iqr)>0){log10(as.numeric(out$res2))}else{as.numeric(out$res2)}, type="p", pch=ifelse(out$res2[!is.na(out$res2)]==min(c(out$res1[!is.na(out$res1)], out$res1[!is.na(out$res2)])), 17, 19),
        xaxt = "n", col=rgb(red = 0, green = 0, blue = 1, alpha = 0.5), cex=1.3, alpha=0.5)
 axis(1, cex.axis=0.8)
 axis(side = 2, lwd = 0, lwd.ticks = 2, las = 2, cex.axis=0.8)

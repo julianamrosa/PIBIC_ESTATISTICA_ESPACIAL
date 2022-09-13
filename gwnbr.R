@@ -111,7 +111,7 @@ gwnbr <- function(y, x, lat, long, h, grid=NULL, latg, longg, method, gwr, offse
     #print(c(alphag, bg, parg))
   }
   if (gwr=="global"){
-    print(c(alphag, aux2))
+    print(data.frame(alphag=alphag, aux2=aux2))
   }
   n <- length(y)
   aux2 <- 0
@@ -278,7 +278,7 @@ gwnbr <- function(y, x, lat, long, h, grid=NULL, latg, longg, method, gwr, offse
       else{
         ddpar <- par-parold
         if (par<E^-3){
-        ddpar <- ddpar*100
+          ddpar <- ddpar*100
         }
       }
       #print(c(j, aux1, cont, aux2, count, parold, par, ddpar))
@@ -430,10 +430,10 @@ gwnbr <- function(y, x, lat, long, h, grid=NULL, latg, longg, method, gwr, offse
   BIC <- npar*log(n)-2*ll
   malpha_ <- 0.05*(ncol(x)/npar)
   t_critical_ <- abs(qt(malpha_/2, n-npar))
-  print("malpha, tcritical, npar")
-  print(c(malpha_, t_critical_, npar))
-  print("gwr method ll dev pctdev adjpctdev pctll adjpctll npar aic aicc bic")
-  print(c(gwr, method, ll, dev, pctdev, adjpctdev, pctll, adjpctll, npar, AIC, AICC, BIC))
+  #print("malpha, tcritical, npar")
+  print(data.frame(malpha=malpha_, tcritical=t_critical_, npar=npar))
+  #print("gwr method ll dev pctdev adjpctdev pctll adjpctll npar aic aicc bic")
+  print(c(gwr=gwr, method=method, ll=ll, dev=dev, pctdev=pctdev, adjpctdev=adjpctdev, pctll=pctll, adjpctll=adjpctll, npar=npar, aic=AIC, aicc=AICC, bic=BIC))
   res_ <<- as.data.frame(res)
   names(res_) <<- c("_id_", "xcoord", "ycoord", "yobs", "yhat", "res", "resraw")
   View(res_)

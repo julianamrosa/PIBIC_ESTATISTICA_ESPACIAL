@@ -475,9 +475,9 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
   }
   View(out)
   par(mgp = c(1.5, 0.4, 0), tcl = -0.25, mar=c(3, 2.4, 1.3, 0.6))
-  plot(x=as.numeric(h1), y=as.numeric(res1), type="p", pch=19, yaxt="n", xaxt = "n", xlab="Bandwidth", ylab=(if(type=="aic"){"AICc"}else{"Cross-Validation Score"}),
+  plot(x=as.numeric(out$h1), y=as.numeric(out$res1), type="p", pch=19, yaxt="n", xaxt = "n", xlab="Bandwidth", ylab=(if(type=="aic"){"AICc"}else{"Cross-Validation Score"}),
        cex.main=1, cex.lab=0.9, cex.axis=0.7, col=rgb(red = 1, green = 0, blue = 0, alpha = 0.5), cex=1.3, alpha=0.5)
-  points(x=as.numeric(h2), y=as.numeric(res2), type="p", pch=19,
+  points(x=as.numeric(out$h2), y=as.numeric(out$res2), type="p", pch=19,
          xaxt = "n", col=rgb(red = 0, green = 0, blue = 1, alpha = 0.5), cex=1.3, alpha=0.5)
   axis(1, cex.axis=0.8)
   axis(side = 2, lwd = 0, lwd.ticks = 2, las = 2, cex.axis=0.8)
@@ -485,7 +485,17 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
 
 #Opções de destaque para o mínimo:
 #linha horizontal --> abline(h=min(c(out$res1[!is.na(out$res1)], out$res2[!is.na(out$res2)])))
-#triângulo --> pch=ifelse(out$res1[!is.na(out$res1)]==min(c(out$res1[!is.na(out$res1)], out$res1[!is.na(out$res2)])), 17, 19)
+#triângulo --> pch=ifelse(out$res1[!is.na(out$res1)]==min(c(out$res1[!is.na(out$res1)], out$res2[!is.na(out$res2)])), 17, 19)
+
+#Aplicando log no eixo y se houver outlier:
+#q1<- quantile(c(as.numeric(out$res1), as.numeric(out$res2)), 0.25, na.rm=T)
+#q3 <- quantile(c(as.numeric(out$res1), as.numeric(out$res2)), 0.75, na.rm=T)
+#iqr <- q3-q1
+#y=if(sum(c(as.numeric(out$res1[!is.na(out$res1)]),
+#as.numeric(out$res2[!is.na(out$res2)]))<=q1-1.5*iqr
+#| c(as.numeric(out$res1[!is.na(out$res1)]),
+#    as.numeric(out$res2[!is.na(out$res2)]))>=q3+1.5*iqr)>0){log10(as.numeric(out$res1)); logaritmo <- TRUE}else{as.numeric(out$res1) logaritmo <- FALSE}
+#lembrar de mudar o label
 
 ### Trocas
 # _dist_ ---> distance
