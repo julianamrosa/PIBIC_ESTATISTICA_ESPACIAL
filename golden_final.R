@@ -8,28 +8,7 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
     offset <- matrix(0, nrow=n, ncol=1)
   }
   x <- cbind(matrix(1, nrow=n, ncol=1), x)
-  pac <- require(kableExtra)
-  inst <- FALSE
-  if (pac){
-    tabela1 <- matrix(c(method, type, gwr), 1, 3)%>%
-      kbl(caption = "", col.names=c("method", "type", "gwr"), align=c("c", "c", "c"))%>%
-      kable_classic(full_width = F, html_font = "Cambria", position="left")
-    print(tabela1)
-  }
-  else{
-    inst <- readline("Do you wish to install the kableExtra package? (yes or no) ")
-    if(inst=="yes"){
-      install.packages('kableExtra')
-      library(kableExtra)
-      tabela1 <- matrix(c(method, type, gwr), 1, 3)%>%
-        kbl(caption = "", col.names=c("method", "type", "gwr"), align=c("c", "c", "c"))%>%
-        kable_classic(full_width = F, html_font = "Cambria", position="left")
-      print(tabela1)
-    }
-    else{
-      print(data.frame(method=method, type=type, gwr=gwr))
-    }
-  }
+  print(data.frame(method=method, type=type, gwr=gwr))
   distance <- dist(COORD, "euclidean")
   maxd <- max(distance)
   if (method=="adaptive1"){
@@ -50,15 +29,7 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
   }
   h1 <- h0+(1-r)*(h3-h0)
   h2 <- h0+r*(h3-h0)
-  if (pac | inst=="yes"){
-    tabela2 <- matrix(c(h0, h1, h2, h3), 1, 4)%>%
-      kbl(caption = "", col.names=c("h0", "h1", "h2", "h3"), align=c("c", "c", "c", "c"))%>%
-      kable_classic(full_width = F, html_font = "Cambria", position="left")
-    print(tabela2)
-  }
-  else{
-    print(data.frame(h0=h0, h1=h1, h2=h2, h3=h3))
-  }
+  print(data.frame(h0=h0, h1=h1, h2=h2, h3=h3))
   cv <- function(h, method, n, coord, x, y, type, maxd, gwr, offset, distance){
     E <- 10
     alphaii <- matrix(0, nrow=n, ncol=2)
@@ -496,46 +467,25 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
   npar2 <- NA
   if (type=="cv"){
     out <<- rbind(out, c(h1, res1, h2, res2))
-    if (pac | inst=="yes"){
-      tabela3 <- matrix(c(golden, xmin), 1, 2)%>%
-        kbl(caption = "", col.names=c("golden", "xmin"), align=c("c", "c"))%>%
-        kable_classic(full_width = F, html_font = "Cambria", position="left")
-      print(tabela3)
-    }
-    else{
-      print(data.frame(golden=golden, xmin=xmin))
-    }
+    print(data.frame(golden=golden, xmin=xmin))
   }
   else{
     out <<- rbind(out, c(h1, res1, npar1, h2, res2, npar2))
-    if (pac | inst=="yes"){
-      tabela3 <- matrix(c(golden, xmin, npar), 1, 3)%>%
-        kbl(caption = "", col.names=c("golden", "xmin", "npar"), align=c("c", "c", "c"))%>%
-        kable_classic(full_width = F, html_font = "Cambria", position="left")
-      print(tabela3)
-    }
-    else{
-      print(data.frame(golden=golden, xmin=xmin, npar=npar))
-    }
+    print(data.frame(golden=golden, xmin=xmin, npar=npar))
   }
   View(out)
-  library(ggplot2)
-  ggplot(out,aes(x=as.numeric(h1),y=as.numeric(res1))) + geom_point(colour="red",alpha=0.5,size=3) +
-    scale_y_continuous() + 
-    scale_x_continuous() + 
-    geom_point(aes(x=as.numeric(h2),y=as.numeric(res2)),alpha=.5,size=3, colour="darkblue") + 
-    labs(x= "Bandwidth", y=if(type=="aic"){"AICc"}else{"Cross-Validation Score"}) +
-    theme_test() +
-    theme(axis.title.y=element_text(colour="black", size=12),
-          axis.title.x = element_text(colour="black", size=12),
-          axis.text = element_text(colour = "black", size=9.5),
-          panel.border = element_blank(),
-          axis.line = element_line(colour = "black"))
+  par(mgp = c(1.5, 0.4, 0), tcl = -0.25, mar=c(3, 2.4, 1.3, 0.6))
+  plot(x=as.numeric(h1), y=as.numeric(res1), type="p", pch=19, yaxt="n", xaxt = "n", xlab="Bandwidth", ylab=(if(type=="aic"){"AICc"}else{"Cross-Validation Score"}),
+       cex.main=1, cex.lab=0.9, cex.axis=0.7, col=rgb(red = 1, green = 0, blue = 0, alpha = 0.5), cex=1.3, alpha=0.5)
+  points(x=as.numeric(h2), y=as.numeric(res2), type="p", pch=19,
+         xaxt = "n", col=rgb(red = 0, green = 0, blue = 1, alpha = 0.5), cex=1.3, alpha=0.5)
+  axis(1, cex.axis=0.8)
+  axis(side = 2, lwd = 0, lwd.ticks = 2, las = 2, cex.axis=0.8)
 }
 
 #Opções de destaque para o mínimo:
-#linha horizontal --> geom_hline(yintercept=min(c(out$res1[!is.na(out$res1)], out$res1[!is.na(out$res2)])))
-#bolinha preta --> col=ifelse(out$res1[!is.na(out$res1)]==min(c(out$res1[!is.na(out$res1)], out$res1[!is.na(out$res2)])), "black", "red")
+#linha horizontal --> abline(h=min(c(out$res1[!is.na(out$res1)], out$res2[!is.na(out$res2)])))
+#triângulo --> pch=ifelse(out$res1[!is.na(out$res1)]==min(c(out$res1[!is.na(out$res1)], out$res1[!is.na(out$res2)])), 17, 19)
 
 ### Trocas
 # _dist_ ---> distance
@@ -546,12 +496,12 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
 setwd('~/PIBIC/golden_section_search')
 data_gwnbr <- read.table('data_gwnbr.txt', header=T)
 
-library(kableExtra)
-library(dplyr)
-matrix(c(mean(data_gwnbr$fleet), var(data_gwnbr$fleet)), 1, 2)%>%
-  kbl(caption = "Fleet Variable", col.names=c("Mean", "Variance"), align=c("c", "c")) %>%
-  kable_classic(full_width = F, html_font = "Cambria", position="left")
-hist(data_gwnbr$fleet, breaks=c(-125, 125, 375, 625, 875, 1125, 1375, 1625, 1875), main="", xlab="Fleet", ylab="Frequency")
+#library(kableExtra)
+#library(dplyr)
+#matrix(c(mean(data_gwnbr$fleet), var(data_gwnbr$fleet)), 1, 2)%>%
+#  kbl(caption = "Fleet Variable", col.names=c("Mean", "Variance"), align=c("c", "c")) %>%
+#  kable_classic(full_width = F, html_font = "Cambria", position="left")
+#hist(data_gwnbr$fleet, breaks=c(-125, 125, 375, 625, 875, 1125, 1375, 1625, 1875), main="", xlab="Fleet", ylab="Frequency")
 
 ############### TESTS AND PLOTS #################
 # Test 1 - GWR=local METHOD=fixed TYPE=aic
@@ -589,7 +539,6 @@ golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr
 
 # Test 11 - GWR=poisson METHOD=adaptive1 TYPE=aic
 golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr$Y,method="adaptive1", type="aic",gwr="poisson")
-
 
 # Test 12 - GWR=poisson METHOD=adaptive1 TYPE=cv
 golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr$Y,method="adaptive1", type="cv",gwr="poisson")
