@@ -1,3 +1,4 @@
+install.packages("rdist")
 gwnbr <- function(y, x, lat, long, h, grid=NULL, latg, longg, method, gwr, offset=NULL, alphag=NULL, geocod){
   E <- 10
   COORD <- matrix(c(long, lat), ncol=2, byrow=F)
@@ -505,7 +506,10 @@ setwd('~/PIBIC/golden_section_search')
 data_gwnbr <- read.table('data_gwnbr.txt', header=T)
 
 #Exemplo 1
+
+start_time <- Sys.time()
 gwnbr(y=data_gwnbr$fleet, x=data_gwnbr$industry, lat=data_gwnbr$Y, long=data_gwnbr$x, h=0.3344601, gwr="local", method="fixed", geocod=data_gwnbr$geocod)
+end_time <- Sys.time()
 
 #Exemplo 2
 gwnbr(y=data_gwnbr$fleet, x=data_gwnbr$industry, lat=data_gwnbr$Y, long=data_gwnbr$x, h=53.200292, gwr="local", method="fixed", geocod=data_gwnbr$geocod)
