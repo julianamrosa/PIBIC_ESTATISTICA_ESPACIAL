@@ -1,6 +1,5 @@
 ############### GOLDEN SECTION SEARCH ###############
-golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
-  pacman::p_load(dplyr, ggplot2)
+ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
   E <- 10
   COORD <- matrix(c(long, lat), ncol=2, byrow=F)
   n <- length(y)
@@ -483,6 +482,7 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
   axis(side = 2, lwd = 0, lwd.ticks = 2, las = 2, cex.axis=0.8)
 }
 
+ # Colocar no artigo e na documentação como sugestão #
 #OpÃ§Ãµes de destaque para o mÃ­nimo:
 #linha horizontal --> abline(h=min(c(out$res1[!is.na(out$res1)], out$res2[!is.na(out$res2)])))
 #triÃ¢ngulo --> pch=ifelse(out$res1[!is.na(out$res1)]==min(c(out$res1[!is.na(out$res1)], out$res2[!is.na(out$res2)])), 17, 19)
@@ -502,9 +502,7 @@ golden <- function(y, x, lat, long, method, type, gwr, offset=NULL){
 # seq ---> sequ
 # dist ---> distan
 
-############### EXEMPLO ###############
-setwd('~/PIBIC/golden_section_search')
-data_gwnbr <- read.table('data_gwnbr.txt', header=T)
+
 
 #library(kableExtra)
 #library(dplyr)
@@ -513,44 +511,3 @@ data_gwnbr <- read.table('data_gwnbr.txt', header=T)
 #  kable_classic(full_width = F, html_font = "Cambria", position="left")
 #hist(data_gwnbr$fleet, breaks=c(-125, 125, 375, 625, 875, 1125, 1375, 1625, 1875), main="", xlab="Fleet", ylab="Frequency")
 
-############### TESTS AND PLOTS #################
-# Test 1 - GWR=local METHOD=fixed TYPE=aic
-golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr$Y,method="fixed", type="aic",gwr="local")
-
-
-# Test 2 - GWR=local METHOD=fixed TYPE=cv
-golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr$Y,method="fixed", type="cv",gwr="local")
-
-# Test 3 - GWR=local METHOD=adaptive1 TYPE=aic
-golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr$Y,method="adaptive1", type="aic",gwr="local")
-
-# Test 4 - GWR=local METHOD=adaptive1 TYPE=cv
-golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr$Y,method="adaptive1", type="cv",gwr="local")
-
-# Test 5 - GWR=global METHOD=fixed TYPE=aic
-golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr$Y,method="fixed", type="aic",gwr="global")
-
-# Test 6 - GWR=global METHOD=fixed TYPE=cv
-golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr$Y,method="fixed", type="cv",gwr="global")
-
-
-# Test 7 - GWR=global METHOD=adaptive1 TYPE=aic
-golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr$Y,method="adaptive1", type="aic",gwr="global")
-
-# Test 8 - GWR=global METHOD=adaptive1 TYPE=cv
-golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr$Y,method="adaptive1", type="cv",gwr="global")
-
-# Test 9 - GWR=poisson METHOD=fixed TYPE=aic
-# ta ficando um pouco diferente do plot do professor
-golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr$Y,method="fixed", type="aic",gwr="poisson")
-
-# Test 10 - GWR=poisson METHOD=fixed TYPE=cv
-golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr$Y,method="fixed", type="cv",gwr="poisson")
-
-# Test 11 - GWR=poisson METHOD=adaptive1 TYPE=aic
-golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr$Y,method="adaptive1", type="aic",gwr="poisson")
-
-# Test 12 - GWR=poisson METHOD=adaptive1 TYPE=cv
-golden(y=data_gwnbr$fleet,x=data_gwnbr$industry,lat=data_gwnbr$x,long=data_gwnbr$Y,method="adaptive1", type="cv",gwr="poisson")
-
-## outliers: exemplos 2, 4, 6, 8, 10, 12
