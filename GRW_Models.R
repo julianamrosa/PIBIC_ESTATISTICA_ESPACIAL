@@ -67,9 +67,9 @@ golden2 <- function(y, x, xvarglobal, weight, lat, long, output, method, model=G
           parg <- E^6
           dpar <- 0
         }
-      alphag <- 1/parg
-    }
+        alphag <- 1/parg
       }
+    }
     devg <- 0
     ddev <- 1
     cont2 <- 0
@@ -110,46 +110,55 @@ golden2 <- function(y, x, xvarglobal, weight, lat, long, output, method, model=G
   }
   distance <- dist(COORD,"euclidean")
   seq <- seq(1,n)
-
-cv <- function(n, wt, x, xa, y, ujg, yhat, nvar,hv, coord, distance, seq, offset, alphag, alphai, S, parg){
-  if(method=="adaptiven"){
-    hv <- matrix(0,1,1)
-    yhat <- matrix(0,1,1)
-    output <<- hv[,"h"]
-    # aqui faltam os laços sobre os quais eu perguntei ao professor
-  }
-  if(method=="fixed_g"|method=="fixed_bsq"|method="adaptive_bsq"){
-  }
-  for(j in i:n){
-    seqi <- matrix(i,n,1)
-    distan <- cbind(seqi, sequ, as.matrix(distance)[,i])
-    if(distancekm=="yes"){
-      dist[,3] <- dist[,3]*111
+  
+  cv <- function(n, wt, x, xa, y, ujg, yhat, nvar,hv, coord, distance, seq, offset, alphag, alphai, S, parg){
+    if(method=="adaptiven"){
+      hv <- matrix(0,1,1)
+      yhat <- matrix(0,1,1)
+      output <<- hv[,"h"]
+      # aqui faltam os laços sobre os quais eu perguntei ao professor
     }
-  }
+    if(method=="fixed_g"|method=="fixed_bsq"|method="adaptive_bsq"){
+    }
+    for(j in i:n){
+      seqi <- matrix(i,n,1)
+      distan <- cbind(seqi, sequ, as.matrix(distance)[,i])
+      if(distancekm=="yes"){
+        dist[,3] <- dist[,3]*111
+      }
+    }
   u <- nrow(distance)
   w <- matrix(0,u,1)
-  #parei na linha 136 
+  for(jj in 1:u){
+    w[jj] <- exp(-0.5*(dist[jj,3]/h)^2)
+    if(method=="fixed_bsq") {
+      w[jj] <- (1-(dist[jj,3]/h)^2)^2
+    } #nao precisa adptiven
+    if(bandwidth=="cv"){
+      w[i] <-0
+    }
+    if(method=="fixed_bsq"){
+      posit <- which(!distance[,3]>h==0)
+      posit <- distance[which(!distance[,3]>3==0)]
+      w[posit] <- 0
+    }
+    if(method=="adaptive_bsq"){
+      distance <- 
+    }
+  }
+    
+    #parei na linha 148
+    
+  } #fecha CV
   
-} #fecha CV
   
-
 } #fecha golden
 
+# trocas ----
+# position ---- posit
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+teste <- which(!exemplo==0)           #retorna apenas indices
+teste <- exemplo[which(!exemplo==0)]  #retorna os valores
 
 
 
