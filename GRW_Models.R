@@ -17,10 +17,11 @@
 # FIXED_BSQ to compute the bandwidth as fixed bi-square; 
 # ADAPTIVEN to compute the bandwidth as adaptive bi-square ($n$ values) and
 # ADAPTIVE_BSQ to compute the bandwidth as adaptive bi-square ($one$ value)
-# DISTANCEKM = if the distances between two locations will be computed in Km using the Basic formulae for calculating spherical distance. 
-# The default value is NO, so the distance is computed using euclidian distance.
+# DISTANCEKM = if the distances between two locations will be computed in Km using the Basic formula for calculating spherical distance. 
+# The default value is NO, so the distance is computed using euclidean distance.
 
 golden2 <- function(y, x, xvarglobal, weight, lat, long, output, method, model=GAUSSIAN, bandwidth,offset=NULL,distancekm=NO){
+  # distancekm, model e offset = default
   E <- 10
   n <- length(y)
   wt <- matrix(1,nrow=n,ncol=1)
@@ -118,48 +119,110 @@ golden2 <- function(y, x, xvarglobal, weight, lat, long, output, method, model=G
       output <<- hv[,"h"]
       # aqui faltam os laços sobre os quais eu perguntei ao professor
     }
-    if(method=="fixed_g"|method=="fixed_bsq"|method="adaptive_bsq"){
+    if(method=="fixed_g"|method=="fixed_bsq"|method=="adaptive_bsq"){
     }
-    for(j in i:n){
-      seqi <- matrix(i,n,1)
-      distan <- cbind(seqi, sequ, as.matrix(distance)[,i])
+    for(j in 1:n){
+      seqi <- matrix(j,n,1)
+      distan <- cbind(seqi, sequ, as.matrix(distance)[,j])
       if(distancekm=="yes"){
-        dist[,3] <- dist[,3]*111
+        distan[,3] <- distan[,3]*111
       }
     }
-  u <- nrow(distance)
-  w <- matrix(0,u,1)
-  for(jj in 1:u){
-    w[jj] <- exp(-0.5*(dist[jj,3]/h)^2)
-    if(method=="fixed_bsq") {
-      w[jj] <- (1-(dist[jj,3]/h)^2)^2
-    } #nao precisa adptiven
-    if(bandwidth=="cv"){
-      w[i] <-0
-    }
-    if(method=="fixed_bsq"){
-      posit <- which(!distance[,3]>h==0)
-      posit <- distance[which(!distance[,3]>3==0)]
-      w[posit] <- 0
-    }
-    if(method=="adaptive_bsq"){
-      distance <- 
+    u <- nrow(distance)
+    w <- matrix(0,u,1)
+    for(jj in 1:u){
+      w[jj] <- exp(-0.5*(dist[jj,3]/h)^2)
+      if(method=="fixed_bsq") {
+        w[jj] <- (1-(dist[jj,3]/h)^2)^2
+      } #nao precisa adptiven
+      if(bandwidth=="cv"){
+        w[i] <-0
+      }
+      if(method=="fixed_bsq"){
+        posit <- which((!distance[,3]>h)==0)
+        posit <- distance[which((!distance[,3]>3)==0)]
+        w[posit] <- 0
+      }
+      if(method=="adaptive_bsq"){
+        distance <- distance[order(distance[,3]),]
+        distance <- cbind(distance,1:n)
+        w <- matrix(0,n,2)
+        hn <- distance[h,3]
+        for(jj in 1:n){
+          if(distance[jj,4]<=h){
+            w[jj,1] <- (1-(distante[jj,3]/hn)^2)^2
+          }
+          else{
+            w[jj,1] <- 0
+            w[jj,2] <- distance[jj,2]
+          }
+          if(bandwidth=="cv"){
+            w <- which(!w==0)
+            w <- w[which(!w==0)]
+            w <- 0
+          }
+          w <- w[order(w[,2]),]
+          w <- w[,1]
+        }
+      }
+      if(model=="gaussian"){
+        if (det(t(x)%*%(w*x*wt)*x)==0){
+          b <- matrix(0,nvar,1)
+        }
+        else{
+          b <- solve(t(x)%*%(w*x*wt)%*%t(x)%*%(w*y*wt))
+        }
+        if(method=="fixed_g"|method=="fixed_bsq"|method=="adaptive_bsq"){
+          yhat[i] <- x[i,]%*%b
+          if(det(t(x)%*%(w*x*wt)==0)){
+            S[i] <- 0
+          }
+          else{
+            S[i] <- (x[i,]%*%solve(t(x)%*%(w*x*wt))*t((x*w*wt)))[i]
+          }
+        if(is.null(xvarglobal)){
+          hat_matrix <- rbind(hat_matrix,(x[i,]%*%solve(t(x)%*%(w*x*wt))*t((x*w*wt)))) #criando hat_matrix aqui, entao supostamente nao haveria problema com dimensão
+          if(i==1){
+            W_f <- cbind(matrix(i,n,1),w,seq(1,nrow(w)))
+          }
+          else{
+            W_f <- cbind(W_f,c(rbind(matrix(i,n,1),w,seq(1,nrow(w)))))
+          }
+          if(is.null(xvarglobal)){
+            ba <- solve(t(t(xa)%*%diag(1,n,n)-hat_matrix))%*%(diag(1,n,n)-hat_matrix)%*%(xa*wt)%*%t(xa)%*%(t(diag(1,n,n)-hat_matrix))%*%(diag(1,n,n)-hat_matrix)*(y*wt) 
+            ya <- y-xa%*%ba
+            for(i in 1:n){
+              m1 <- (i-1)%*%n+1
+              m2 <- m1+(n-1)
+              w <- W_f[m1:m2,2]
+              if(det(t(x)%*%(w*x*wt))==0){
+                b <- matrix(0,nvar,1)
+              }
+              else{
+                b <- solve(t(x)%*%(w*x*wt))%*%t(x)*(w*ya*wt)
+              }
+              uj <- cbind(x,xa)*rbind(b,ba)
+              yhat[i] <- uj[i]
+            }
+            S <- diag(xa%*%solve(t(xa)%*%t(diag(1,n,n)-hat_matrix)%*%(diag(1,n,n)-hat_matrix)%*%(xa*wt))%*%t((xa*wt))%*%t(diag(1,n,n)-hat_matrix)%*%(diag(1,n,n)-hat_matrix)+hat_matrix)
+          }
+          CV <- t((y-yhat)*wt)%*%(y-yhat) 
+        }  
+      }
     }
   }
     
-    #parei na linha 148
+    #parei na linha 187
     
   } #fecha CV
-  
-  
 } #fecha golden
 
 # trocas ----
 # position ---- posit
-
+# _dist_   ---- distance
+# dist     ---- distan
 teste <- which(!exemplo==0)           #retorna apenas indices
 teste <- exemplo[which(!exemplo==0)]  #retorna os valores
 
 
-
-
+# nao fazer para adaptiven
