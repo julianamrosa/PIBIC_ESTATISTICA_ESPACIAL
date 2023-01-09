@@ -164,7 +164,7 @@ golden2 <- function(y, x, xvarglobal, weight, lat, long, output, method, model=G
           w <- w[order(w[,2]),]
           w <- w[,1]
         }
-      }
+      } # fecha if linha 146
       if(model=="gaussian"){
         if (det(t(x)%*%(w*x*wt)*x)==0){
           b <- matrix(0,nvar,1)
@@ -206,13 +206,38 @@ golden2 <- function(y, x, xvarglobal, weight, lat, long, output, method, model=G
             }
             S <- diag(xa%*%solve(t(xa)%*%t(diag(1,n,n)-hat_matrix)%*%(diag(1,n,n)-hat_matrix)%*%(xa*wt))%*%t((xa*wt))%*%t(diag(1,n,n)-hat_matrix)%*%(diag(1,n,n)-hat_matrix)+hat_matrix)
           }
-          CV <- t((y-yhat)*wt)%*%(y-yhat) 
-        }  
-      }
+          CV <- t((y-yhat)*wt)%*%(y-yhat)
+          if(model=='poisson'){
+            ll <- sum((-1)*yhat+y*log(yhat)-lgamma(y+1)) #confirmar se esse log nao é ln
+            npar <- sum(S)
+          }
+          if(model=='negbin'){
+            ll <- sum(y*log(alphai*yhat)-(y+1/alphai)*log(1+alphai*yhat)+lgamma(y+1/alphai)-lgamma(1/alphai)-lgamma(y+1))
+            npar <- sum(S)+sum(S)/nvar
+          }
+          AIC <- 2*npar-2*11
+          AICC <- AIC+(2*npar*(npar+1))/(n-npar-1)
+          if(bandwidth=='AIC'){
+            CV<- AICC
+          }
+        } #frcha linha 183 
+      } #fecha linha 175 
+    } #fecha if == gaussian linha 168
+  } #fecha laço for na linha 133
+  if(model=='logistic'){
+    uj <- (y+y[,])/2 #revisar linha
+    nj <- log(uj/(1-uj))
+    dev <- 0; ddev <- 1; cont <- 0
+    while(abs(ddev)>0.000001 & cont<100){
+      cont <- cont+1
+      uj <- ifelse(uj>E^100,E^100,uj)
+      Ai <- uj*(1-uj)
+      Ai <- ifelse(Ai<=0,E*(-5),Ai)
+      zj <- nj+(y-uj)/Ai
+#continua...
+      
     }
-  }
-    
-    #parei na linha 187
+  }  
     
   } #fecha CV
 } #fecha golden
@@ -226,3 +251,21 @@ teste <- exemplo[which(!exemplo==0)]  #retorna os valores
 
 
 # nao fazer para adaptiven
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
