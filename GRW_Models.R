@@ -221,10 +221,10 @@ golden2 <- function(y, x, xvarglobal, weight, lat, long, output, method, model=G
           if(bandwidth=='AIC'){
             CV<- AICC
           }
-        } #frcha linha 183 
+        } #fecha linha 184 
       } #fecha linha 175 
-    } #fecha if == gaussian linha 168
-  } #fecha laço for na linha 133
+     } #fecha if == gaussian linha 169
+    } #fecha laço for na linha 134
   if(model=='logistic'){
     uj <- (y+y[,])/2 #revisar linha
     nj <- log(uj/(1-uj))
@@ -374,10 +374,96 @@ golden2 <- function(y, x, xvarglobal, weight, lat, long, output, method, model=G
     npar <- sum(S)
     AIC <-  2*npar-2*ll
     AICC <-  AIC +(2*npar*(npar+1))/(n-npar-1)
+    if(bandwidth=="AIC"){
+      CV <- AICC
+    } 
   } # fecha modelo logístico  
-    
+  res <- cbind(CV,npar)  
   } # fecha CV
+
+# DEFINING GOLDEN SECTION SEARCH PARAMETERS #
+  
+if(method=="fixed_g"|method=="fixed_bsq"){
+  ax <- 0
+  bx <- floor(max(distance)+1)
+  if(distancekm=="yes"){
+    bx <- bx*111
+  } 
+}
+ 
+if(method=="adaptive_bsq"){
+  ax <- 5
+  bx <- n
+}
+  
+r <- 0.61803399
+tol <- 0.1
+if(globalmin=="no"){
+  lower <- ax
+  upper <- bx
+  xmin <- matrix(0,1,2)
+  for(GMY in 1:1){
+    ax1 <- lower[GMY]
+    bx1 <- upper[GMY]
+  }
+}
+else{ #globalmin=='yes'
+  lower <- cbind(ax,(1-r)*bx,r*bx)
+  upper <- cbind((1-r)*bx,r*bx,bx)
+  xmin <- matrix(0,3,2)
+  for(MY in 1:3){
+    ax1 <- lower[GMY]
+    bx1 <- upper[GMY]
+  }
+}
+h0 <- ax1
+h3 <- bx1
+h1 <- bx1-r*(bx1-ax1)
+h2 <- ax1-r*(bx1-ax1)
+print(c(h0,h1,h2,h3))
+# /***************************************/ #
+
+res1 <- cv(h1)
+CV1 <- res1[1]
+res2 <- cv(h2)
+CV2 <- res2[1]
+
+if(method=="fixed_g"|method=="fixed_bsq"|method=="adaptive_bsq"){
+  if(GMY==1){
+    var_ <<- data.frame(GMY,h1,cv1,h2,cv2)
+    View(var_)
+    # var{GMY h1 cv1 h2 cv2}
+    # res_ <<- as.data.frame(res)
+    # names(res_) <<- c("_id_", "xcoord", "ycoord", "yobs", "yhat", "res", "resraw")
+    # View(res_)
+    # acho que ele vai criar uma tabela com essas variaveis que vai colocar aqui
+  }
+  int <- 1
+  while(abs(h3-h0) > tol*(abs(h1)+abs(h2)) & int<200){
+    if(CV2<CV1){
+      h0 <- h1
+      h1 <- h3-r*(h3-h0)
+      h2 <- h0+r*(h3-h0)
+      CV1 <- CV2
+      res2 <- cv(h2)
+      CV2 <- res2[1]
+    }
+    else{
+      h3 <- h2
+      h1 <- h3-r*(h3-h0)
+      h2 <- h0+r*(h3-h0)
+      CV2 <- CV1
+      res1 <- cv(h1)
+      CV1 <- res1[1]
+    } #parei na linha 569
+  }
+}
+
+
 } # fecha golden
+
+
+#parei na linha 500
 
 # trocas ----
 # position ---- posit
@@ -388,6 +474,30 @@ teste <- exemplo[which(!exemplo==0)]  #retorna os valores
 
 
 # nao fazer para adaptiven
+
+setwd('C:/Users/jehhv/OneDrive/Documentos/UnB/2022/2022.1/PIBIC')
+
+library(readr)
+GeorgiaData <- read_csv("GWR/GeorgiaData.csv")
+View(GeorgiaData)
+
+golden(y=GeorgiaData$PctBach,x=GeorgiaData$TotPop90, xvarglobal=, weight=, lat=GeorgiaData$X,long=GeorgiaData$Y, method="adaptive_bsq", distancekm="yes") #precisa da saída output no R?
+# o que é tudo isso solto na função? (PctRural PctEld PctFB PctPov PctBlack)
+
+# %Golden(DATA=Georgiadata,YVAR=PctBach,XVAR=TotPop90 PctRural PctEld PctFB PctPov PctBlack,
+#        LONG=x,LAT=y,OUTPUT=band,METHOD=ADAPTIVE_BSQ,DISTANCEKM=YES);
+
+# %macro Golden(DATA=,YVAR=,XVAR=,XVARGLOBAL=,WEIGHT=,LAT=,LONG=,OUTPUT=,GLOBALMIN=YES,METHOD=,MODEL=GAUSSIAN,BANDWIDTH=CV,OFFSET=,DISTANCEKM=NO);
+
+# golden2 <- function(y, x, xvarglobal, weight, lat, long, output, method, model=GAUSSIAN, bandwidth,offset=NULL,distancekm=NO){
+
+
+
+
+
+
+
+
 
 
 
