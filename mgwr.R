@@ -621,6 +621,89 @@ mgwr <- function(DATA, YVAR, XVAR, WEIGHT=NULL, LAT, LONG,
     return (bandwidth)
   } #linha 433
   #conferi até aqui
+  #linha 435
+  gwr <- function(h, y, x, fi, distance=distance, n=n,
+                  nvarg=nvarg, seq=seq, wt=wt, ujg=ujg,
+                  parg=parg, yhat=yhat, offset=offset,
+                  Sm=Sm, Sm3=Sm3, Rj=Rj, mRj=mRj,
+                  alphai=alphai, yhat_beta=yhat_beta,
+                  Ai=Ai){
+    nvar <- ncol(x)
+    bim <- rep(0, nvar*n)
+    yhatm <- rep(0, n)
+    for (i in 1:n){
+      for (j in 1:n){                                                                                                                        
+        seqi <- rep(i, n)
+        dist <- cbind(seqi, t(seq), distance[,i])
+        if (toupper(DISTANCEKM)=="YES"){
+          distan[,3] <- distan[,3]*111
+        }
+      }
+      u <- nrow(distan)
+      w <- rep(0, u)
+      for (jj in 1:u){
+        if (toupper(METHOD)=="FIXED_G"){
+          w[jj] <- exp(-(dist[jj,3]/h)^2)
+        }
+        else if (toupper(METHOD)=="FIXED_BSQ"){
+          w[jj] <- (1-(dist[jj,3]/h)^2)^2
+        }
+      }
+      if (toupper(METHOD)=="ADAPTIVE_BSQ"){ #linha 457
+        distan <- distan[order(distan[, 3]), ]
+        distan <- cbind(distan, 1:nrow(distan))
+        w <- matrix(0, n, 2)	 
+        hn <- distan[h,3]
+        for (jj in 1:n){
+          if (distan[jj,4]<=h){
+            w[jj,1] <- (1-(dist[jj,3]/hn)^2)^2
+          }
+          else (w[jj,1]==0){
+            w[jj,2] <- dist[jj,2]
+          }
+        }
+        w <- w[order(w[, 2]), ]
+        w <- w[,1]
+      }
+      ## MODEL SELECTION ##
+      if (toupper(MODEL)=="GAUSSIAN"){
+        if (det(t(x)%*%(w*x*wt))==0){
+          b <- rep(0, nvar)
+        }
+        else{
+          b=solve(t(x)%*%(w*x*wt))%*%t(x)%*%(w*y*wt)
+        }
+        uj <- x%*%b
+        if (nvar==nvarg){
+          if (det(t(x)%*%(w*x*wt))==0){
+            Sm[i,] <- rep(0, n)
+            mRj[i,] <- matrix(0, n*nvar)
+          }
+          else{
+            ej <- diag(nvar)
+            Sm[i,] <- (x[i,]%*%solve(t(x)%*%(w*x*wt))%*%t(x*w*wt))
+            Sm3[i,] <- t(diag((solve(t(x)%*%(w*x*wt))%*%t(x*w*wt))%*%t(solve(t(x)%*%(w*x*wt))%*%t(x*w*wt))))
+            for (jj in 1:nvar){
+              m1 <- (jj-1)*n+1
+              m2 <- m1+(n-1)
+              mRj[i, m1:m2] <- (x[i,jj]*ej[jj,]*solve(t(x)%*%(w*x*wt))%*%t(x*w*wt))
+            }
+          }
+        }
+        else{
+          if (det(t(x)%*%(w*x*wt))==0){
+            Rj[i,] <- rep(0, n)
+          }
+          else{
+            Rj[i,] <- (x[i,]%*%solve(t(x)%*%(w*x*wt))%*%t(x*w*wt))
+          }
+        }
+      } #linha 493 CONTINUAR DAQUI
+    }
+    beta <- matrix(bim, n)
+    yhbeta <- cbind(yhatm, beta)
+    return (yhbeta)
+  }
 }
 
 #ifs por else ifs
