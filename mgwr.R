@@ -54,7 +54,7 @@ mod3 <- lm(PctBach~PctBlack+PctFB+TotPop90+PctEld, data=georgia_data_std)
 summary(mod3)
 
 #abaixo, passar x, y, LAT e LONG como strings --> nomes das variáveis
-mgwr <- function(DATA, YVAR, XVAR, WEIGHT=NULL, LAT, LONG,
+mgwnbr <- function(DATA, YVAR, XVAR, WEIGHT=NULL, LAT, LONG,
                  GLOBALMIN="yes", METHOD, MODEL="GAUSSIAN",
                  MGWR="yes", BANDWIDTH="CV", OFFSET=NULL,
                  DISTANCEKM="NO", INT=50, H=NULL){
@@ -77,10 +77,10 @@ mgwr <- function(DATA, YVAR, XVAR, WEIGHT=NULL, LAT, LONG,
   bi <- matrix(0, nvarg*N, 4)
   Alphai <- matrix(0, N, 3)
   s <- rep(0, N)
-  mRj <- matrix(0, N, N*nvarg)
-  Sm <- matrix(0, N, N)
-  Sm3 <- matrix(0, N, nvarg)
-  Rj <- matrix(0, N, N)
+  mrj <- matrix(0, N, N*nvarg)
+  sm <- matrix(0, N, N)
+  sm3 <- matrix(0, N, nvarg)
+  rj <- matrix(0, N, N)
   Cm <- matrix(0, N, N*nvarg)
   stdbm <- matrix(0, N, nvarg)
   mAi <- matrix(0, N, nvarg)
@@ -241,9 +241,9 @@ mgwr <- function(DATA, YVAR, XVAR, WEIGHT=NULL, LAT, LONG,
       #linhas 214, 288, 331 fecham esse loop no sas
       for (j in 1:n){
         seqi <- rep(i, n)
-        distan <- cbind(seqi, t(sequ), as.matrix(distance)[,i])
+        distan <<- cbind(seqi, sequ, as.matrix(distance)[,i])
         if (toupper(DISTANCEKM)=="YES"){
-          distan[,3] <- distan[,3]*111
+          distan[,3] <<- distan[,3]*111
         }
       }
       u <- nrow(distan)
@@ -259,8 +259,8 @@ mgwr <- function(DATA, YVAR, XVAR, WEIGHT=NULL, LAT, LONG,
         w[position] <- 0
       }
       else if (toupper(METHOD)=="ADAPTIVE_BSQ"){
-        distan <- distan[order(distan[, 3]), ]
-        distan <- cbind(distan, 1:nrow(distan))
+        distan <<- distan[order(distan[, 3]), ]
+        distan <<- cbind(distan, 1:nrow(distan))
         w <- matrix(0, n, 2)	
         hn <- distan[h,3]
         for (jj in 1:n){
@@ -270,7 +270,7 @@ mgwr <- function(DATA, YVAR, XVAR, WEIGHT=NULL, LAT, LONG,
           else{
             w[jj,1] <- 0
           }
-          w[jj,2] <- dist[jj,2]
+          w[jj,2] <- distan[jj,2]
         }
         if (toupper(BANDWIDTH)=="CV"){
           w[which(w[,2]==i)] <- 0
@@ -478,7 +478,7 @@ mgwr <- function(DATA, YVAR, XVAR, WEIGHT=NULL, LAT, LONG,
       CV <- AICC
     }
     #free dist w
-    res <- cbind(cv, npar)
+    res <- cbind(CV, npar)
     return (res)
   } #linha 344
   GSS <- function(depy, indepx, fix, distance=Distance, n=N){
@@ -502,7 +502,7 @@ mgwr <- function(DATA, YVAR, XVAR, WEIGHT=NULL, LAT, LONG,
       lower <- ax
       upper <- bx
       xmin <- rep(0, 2)
-      GMY <- 1
+      GMY <- 1 #não é atualizado
       ax1 <- lower[GMY]
       bx1 <- upper[GMY]
       h0 <- ax1
@@ -536,25 +536,25 @@ mgwr <- function(DATA, YVAR, XVAR, WEIGHT=NULL, LAT, LONG,
       }
       if (CV1<CV2){
         golden <- CV1
-        xmin[GMY,1] <- golden
-        xmin[GMY,2] <- h1
+        xmin[1] <- golden #tirei GMY
+        xmin[2] <- h1
         npar <- res1[1]
         if (toupper(METHOD)=="ADAPTIVE_BSQ"){
-          xmin[GMY,2] <- floor(h1)
-          xming <- xmin[GMY,2]
+          xmin[2] <- floor(h1)
+          xming <- xmin[2]
         }
       }
       else{
         golden <- CV2
-        xmin[GMY,1] <- golden
-        xmin[GMY,2] <- h2
+        xmin[1] <- golden
+        xmin[2] <- h2
         npar <- res2[1]
         if (toupper(METHOD)=="ADAPTIVE_BSQ"){
-          xmin[GMY,2] <- floor(h2)
-          xming <- xmin[GMY,2]
+          xmin[2] <- floor(h2)
+          xming <- xmin[2]
         }
       }
-      xming <- xmin[GMY,2]
+      xming <- xmin[2]
       #print(golden)
       #print((xmin[GMY,2])['xmin']) --> verificar
       #if (toupper(BANDWIDTH)=="AIC"){print(npar)}
@@ -634,18 +634,18 @@ mgwr <- function(DATA, YVAR, XVAR, WEIGHT=NULL, LAT, LONG,
   #conferi até aqui
   #linha 435
   gwr <- function(h, y, x, fi, distance=Distance, n=N,
-                  nvarg=nvarg, sequ=Sequ, wt=Wt, ujg=Ujg,
+                  Nvarg=nvarg, sequ=Sequ, wt=Wt, ujg=Ujg,
                   parg=Parg, yhat=Yhat, offset=Offset,
-                  Sm=Sm, Sm3=Sm3, Rj=Rj, mRj=mRj,
+                  Sm=sm, Sm3=sm3, Rj=rj, mRj=mrj,
                   alphai=Alphai, yhat_beta=Yhat_beta,
-                  Ai=Ai){
+                  ai=Ai){
     nvar <- ncol(x)
     bim <- rep(0, nvar*n)
     yhatm <- rep(0, n)
     for (i in 1:n){
       for (j in 1:n){                                                                                                                        
         seqi <- rep(i, n)
-        dist <- cbind(seqi, t(sequ), distance[,i])
+        dist <- cbind(seqi, t(sequ), as.matrix(distance)[,i])
         if (toupper(DISTANCEKM)=="YES"){
           distan[,3] <- distan[,3]*111
         }
@@ -654,10 +654,10 @@ mgwr <- function(DATA, YVAR, XVAR, WEIGHT=NULL, LAT, LONG,
       w <- rep(0, u)
       for (jj in 1:u){
         if (toupper(METHOD)=="FIXED_G"){
-          w[jj] <- exp(-(dist[jj,3]/h)^2)
+          w[jj] <- exp(-(distan[jj,3]/h)^2)
         }
         else if (toupper(METHOD)=="FIXED_BSQ"){
-          w[jj] <- (1-(dist[jj,3]/h)^2)^2
+          w[jj] <- (1-(distan[jj,3]/h)^2)^2
         }
       }
       if (toupper(METHOD)=="ADAPTIVE_BSQ"){ #linha 457
@@ -667,12 +667,12 @@ mgwr <- function(DATA, YVAR, XVAR, WEIGHT=NULL, LAT, LONG,
         hn <- distan[h,3]
         for (jj in 1:n){
           if (distan[jj,4]<=h){
-            w[jj,1] <- (1-(dist[jj,3]/hn)^2)^2
+            w[jj,1] <- (1-(distan[jj,3]/hn)^2)^2
           }
           else{
             (w[jj,1]==0)
           }
-          w[jj,2] <- dist[jj,2]
+          w[jj,2] <- distan[jj,2]
         }
         w <- w[order(w[, 2]), ]
         w <- w[,1]
@@ -686,7 +686,7 @@ mgwr <- function(DATA, YVAR, XVAR, WEIGHT=NULL, LAT, LONG,
           b <- solve(t(x)%*%(w*x*wt))%*%t(x)%*%(w*y*wt)
         }
         uj <- x%*%b
-        if (nvar==nvarg){
+        if (nvar==Nvarg){
           if (det(t(x)%*%(w*x*wt))==0){
             Sm[i,] <- rep(0, n)
             mRj[i,] <- matrix(0, n*nvar)
@@ -698,7 +698,7 @@ mgwr <- function(DATA, YVAR, XVAR, WEIGHT=NULL, LAT, LONG,
             for (jj in 1:nvar){
               m1 <- (jj-1)*n+1
               m2 <- m1+(n-1)
-              mRj[i, m1:m2] <- (x[i,jj]*ej[jj,]*solve(t(x)%*%(w*x*wt))%*%t(x*w*wt))
+              mRj[i, m1:m2] <- (x[i,jj]*ej[jj,])%*%solve(t(x)%*%(w*x*wt))%*%t(x*w*wt)
             }
           }
         }
@@ -770,14 +770,14 @@ mgwr <- function(DATA, YVAR, XVAR, WEIGHT=NULL, LAT, LONG,
           cont2 <- 0
           while (abs(ddev)>0.000001 & cont2<100){
             uj <- ifelse(uj>E^100, E^100, uj)
-            Ai <- (uj/(1+alpha*uj))+(y-uj)*(alpha*uj/(1+2*alpha*uj+alpha^2*uj*uj))
-            Ai <- ifelse(Ai<=0, E^-5, Ai)	
-            zj <- nj+(y-uj)/(Ai*(1+alpha*uj))-yhat_beta+fi
-            if (det(t(x)%*%(w*Ai*x*wt))==0){
+            ai <- (uj/(1+alpha*uj))+(y-uj)*(alpha*uj/(1+2*alpha*uj+alpha^2*uj*uj))
+            ai <- ifelse(ai<=0, E^-5, ai)	
+            zj <- nj+(y-uj)/(ai*(1+alpha*uj))-yhat_beta+fi
+            if (det(t(x)%*%(w*ai*x*wt))==0){
               b <- rep(0, nvar)
             }
             else{
-              b <- solve(t(x)%*%(w*Ai*x*wt))%*%t(x)%*%(w*Ai*wt*zj)
+              b <- solve(t(x)%*%(w*ai*x*wt))%*%t(x)%*%(w*ai*wt*zj)
             }
             nj <- x*b+yhat_beta-fi
             nj <- ifelse(nj>E^2, E^2, nj)
@@ -797,28 +797,28 @@ mgwr <- function(DATA, YVAR, XVAR, WEIGHT=NULL, LAT, LONG,
           cont <- cont+1
           ddpar <- par-parold
         }  #linha 555
-        if (nvar==nvarg){
-          if (det(t(x)%*%(w*Ai*x*wt))==0){
+        if (nvar==Nvarg){
+          if (det(t(x)%*%(w*ai*x*wt))==0){
             Sm[i,] <- c(0, n)
             mRj[i,] <- rep(0, n*nvar)
           }
           else{
             ej <- diag(nvar)
-            Sm[i,] <- (x[i,]%*%solve(t(x)%*%(w*Ai*x*wt))%*%t(x*w*wt*Ai))
-            Sm3[i,] <- t(diag((solve(t(x)%*%(w*Ai*x*wt))%*%t(x*w*wt*Ai))%*%diag(1/Ai)%*%t(solve(t(x)%*%(w*Ai*x*wt))%*%t(x*w*wt*Ai))))
+            Sm[i,] <- (x[i,]%*%solve(t(x)%*%(w*ai*x*wt))%*%t(x*w*wt*ai))
+            Sm3[i,] <- t(diag((solve(t(x)%*%(w*ai*x*wt))%*%t(x*w*wt*ai))%*%diag(1/ai)%*%t(solve(t(x)%*%(w*ai*x*wt))%*%t(x*w*wt*ai))))
             for (jj in 1:nvar){
               m1 <- (jj-1)*n+1
               m2 <- m1+(n-1)
-              mRj[i, m1:m2] <- (x[i,jj]*ej[jj,]*solve(t(x)%*%(w*Ai*x*wt))%*%t(x*w*wt*Ai))
+              mRj[i, m1:m2] <- (x[i,jj]*ej[jj,])%*%solve(t(x)%*%(w*x*wt))%*%t(x*w*wt)
             }
           }
         }
         else{
-          if (det(t(x)%*%(w*Ai*x*wt))==0){
+          if (det(t(x)%*%(w*ai*x*wt))==0){
             Rj[i,] <- rep(0, n)
           }
           else{
-            Rj[i,] <- (x[i,]%*%solve(t(x)%*%(w*Ai*x*wt))%*%t(x*w*wt*Ai))
+            Rj[i,] <- (x[i,]%*%solve(t(x)%*%(w*ai*x*wt))%*%t(x*w*wt*ai))
           }
         }
         if (toupper(MODEL)=="NEGBIN"){
@@ -842,14 +842,14 @@ mgwr <- function(DATA, YVAR, XVAR, WEIGHT=NULL, LAT, LONG,
         while (abs(ddev)>0.000001 & cont<100){
           cont <- cont+1
           uj <- ifelse(uj>E^100, E^100, uj)
-          Ai <- uj*(1-uj)
-          Ai <- ifelse(Ai<=0, E^-5, Ai)	
-          zj <- nj+(y-uj)/Ai-yhat_beta+fi
-          if (det(t(x)%*%(w*Ai*x*wt))==0){
+          ai <- uj*(1-uj)
+          ai <- ifelse(ai<=0, E^-5, ai)	
+          zj <- nj+(y-uj)/ai-yhat_beta+fi
+          if (det(t(x)%*%(w*ai*x*wt))==0){
             b <- rep(0, nvar)
           }
           else{
-            b <- solve(t(x)%*%(w*Ai*x*wt))%*%t(x)%*%(w*Ai*zj*wt)
+            b <- solve(t(x)%*%(w*ai*x*wt))%*%t(x)%*%(w*ai*zj*wt)
           }
           nj <- x*b+yhat_beta-fi
           nj <- ifelse(nj>E^2, E^2, nj)
@@ -869,28 +869,28 @@ mgwr <- function(DATA, YVAR, XVAR, WEIGHT=NULL, LAT, LONG,
             ddev <- dev-olddev
           }
         }
-        if (nvar==nvarg){
-          if (det(t(x)%*%(w*Ai*x*wt))==0){
+        if (nvar==Nvarg){
+          if (det(t(x)%*%(w*ai*x*wt))==0){
             Sm[i,] <- rep(0, n)
             mRj[i,] <- matrix(0, n*nvar)
           }
           else{
             ej <- diag(nvar)
-            Sm[i,] <- (x[i,]%*%solve(t(x)%*%(w*Ai*x*wt))%*%t(x*w*wt*Ai))
-            Sm3[i,] <- t(diag((solve(t(x)%*%(w*Ai*x*wt))%*%t(x*w*wt*Ai))%*%diag(1/Ai)%*%t(solve(t(x)%*%(w*Ai*x*wt))%*%t(x*w*wt*Ai))))
+            Sm[i,] <- (x[i,]%*%solve(t(x)%*%(w*ai*x*wt))%*%t(x*w*wt*ai))
+            Sm3[i,] <- t(diag((solve(t(x)%*%(w*ai*x*wt))%*%t(x*w*wt*ai))%*%diag(1/ai)%*%t(solve(t(x)%*%(w*ai*x*wt))%*%t(x*w*wt*ai))))
             for (jj in 1:nvar){
               m1 <- (jj-1)*n+1
               m2 <- m1+(n-1)
-              mRj[i, m1:m2] <- (x[i,jj]*ej[jj,]*solve(t(x)%*%(w*Ai*x*wt))%*%t(x*w*wt*Ai))
+              mRj[i, m1:m2] <- (x[i,jj]*ej[jj,])%*%solve(t(x)%*%(w*x*wt))%*%t(x*w*wt)
             }
           }
         }
         else{
-          if (det(t(x)%*%(w*Ai*x*wt))==0){
+          if (det(t(x)%*%(w*ai*x*wt))==0){
             Rj[i,] <- rep(0, n)
           }
           else{
-            Rj[i,] <- (x[i,]*solve(t(x)%*%(w*Ai*x*wt))%*%t(x*w*wt*Ai))
+            Rj[i,] <- (x[i,]*solve(t(x)%*%(w*ai*x*wt))%*%t(x*w*wt*ai))
           }
         }
       }
@@ -905,7 +905,7 @@ mgwr <- function(DATA, YVAR, XVAR, WEIGHT=NULL, LAT, LONG,
     return (yhbeta) #conferi até aqui (falta if else {} ())
   }
   #testando:
-  if (toupper(MGWR)!="yes"){
+  if (toupper(MGWR)!="YES"){
     finb <- rep(0, N)
     Yhat_beta <- Offset
     if (!is.null(H)){
@@ -917,9 +917,17 @@ mgwr <- function(DATA, YVAR, XVAR, WEIGHT=NULL, LAT, LONG,
     print(c("General Bandwidth", h))
     Yhat_beta <- gwr(h,y,x,finb)
     beta <- Yhat_beta[,2:nvarg+1]
-    fi <- x*beta
+    print("x")
+    print(x)
+    print(class(x))
+    print(dim(x))
+    print("beta")
+    print(beta)
+    print(class(beta))
+    print(dim(beta))
+    fi <- x%*%beta
     mband <- h
-    Sm2 <- Sm
+    Sm2 <- sm
   }
   else{
     finb <- rep(0, N)
@@ -935,12 +943,15 @@ mgwr <- function(DATA, YVAR, XVAR, WEIGHT=NULL, LAT, LONG,
 }
 
 #ifs por else ifs
-#conferir ; choose j inv = * E do
+#conferir ; choose j inv = * E do substituições (distan)
 
 #checar argumentos gwr e GSS
 
 ## Testes ##
-mgwr(DATA=georgia_data_std, YVAR="PctBach",
+mgwnbr(DATA=georgia_data_std, YVAR="PctBach",
      XVAR=c("PctBlack", "PctFB", "TotPop90", "PctEld"),
      LAT="Y", LONG="X", GLOBALMIN="no", METHOD="adaptive_bsq",
      BANDWIDTH="cv", MODEL="gaussian")
+
+#investigar valor diferente de h
+#perguntar sobre dimensões do x*beta
