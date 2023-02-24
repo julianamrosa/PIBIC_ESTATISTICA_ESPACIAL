@@ -59,10 +59,11 @@ mgwnbr <- function(DATA, YVAR, XVAR, WEIGHT=NULL, LAT, LONG,
                  MGWR="yes", BANDWIDTH="CV", OFFSET=NULL,
                  DISTANCEKM="NO", INT=50, H=NULL){
   #lembrar de tornar band global
+  Yhat_beta <- NULL
   E <- 10
-  y <- DATA[, YVAR]
-  x <- DATA[, which(names(DATA) %in% XVAR)]
-  N <- length(y)
+  Y <- DATA[, YVAR]
+  X <- DATA[, which(names(DATA) %in% XVAR)]
+  N <- length(Y)
   Wt <-rep(1, N)
   if (!is.null(WEIGHT)){
     Wt <- as.matrix(WEIGHT)
@@ -71,8 +72,8 @@ mgwnbr <- function(DATA, YVAR, XVAR, WEIGHT=NULL, LAT, LONG,
   if (!is.null(OFFSET)){
     Offset <- as.matrix(OFFSET)
   }
-  x <- as.matrix(cbind(rep(1, N), x))
-  nvarg <- ncol(x)
+  X <- as.matrix(cbind(rep(1, N), X))
+  nvarg <- ncol(X)
   Yhat <- rep(0, N)
   bi <- matrix(0, nvarg*N, 4)
   Alphai <- matrix(0, N, 3)
@@ -87,10 +88,9 @@ mgwnbr <- function(DATA, YVAR, XVAR, WEIGHT=NULL, LAT, LONG,
   ENP <- rep(0, nvarg+2)
   ## global estimates ##
   if (toupper(MODEL)=="POISSON" | toupper(MODEL)=="NEGBIN"){
-    uj <- (y+mean(y))/2
+    uj <- (Y+mean(Y))/2
     nj <- log(uj)
-    #print(nj)
-    Parg <- sum((y-uj)^2/uj)/(N-nvarg)
+    Parg <- sum((Y-uj)^2/uj)/(N-nvarg)
     ddpar <- 1
     cont <- 1
     while (abs(ddpar)>0.000001 & cont<100){
@@ -104,12 +104,12 @@ mgwnbr <- function(DATA, YVAR, XVAR, WEIGHT=NULL, LAT, LONG,
       }
       else{
         if (cont>1){
-          Parg <- 1/(sum((y-uj)^2/uj)/(N-nvarg))
+          Parg <- 1/(sum((Y-uj)^2/uj)/(N-nvarg))
         }
         while (abs(dpar)>0.000001 & cont1<200){
           Parg <- ifelse(Parg<E^-10, E^-10, Parg)
-          g <- sum(digamma(Parg+y)-digamma(Parg)+log(Parg)+1-log(Parg+uj)-(Parg+y)/(Parg+uj))
-          hess <- sum(trigamma(Parg+y)-trigamma(Parg)+1/Parg-2/(Parg+uj)+(y+Parg)/(Parg+uj)^2)
+          g <- sum(digamma(Parg+Y)-digamma(Parg)+log(Parg)+1-log(Parg+uj)-(Parg+Y)/(Parg+uj))
+          hess <- sum(trigamma(Parg+Y)-trigamma(Parg)+1/Parg-2/(Parg+uj)+(Y+Parg)/(Parg+uj)^2)
           hess <- ifelse(hess==0, E^-23, hess)
           par0 <- Parg
           Parg <- par0-solve(hess)%*%g
@@ -141,33 +141,28 @@ mgwnbr <- function(DATA, YVAR, XVAR, WEIGHT=NULL, LAT, LONG,
       ddev <- 1
       cont2 <- 0
       while (abs(ddev)>0.000001 & cont2<100){
-        #print("sim")
         uj <- ifelse(uj>E^100, E^100, uj)
-        Ai <- (uj/(1+Alphag*uj))+(y-uj)*(Alphag*uj/(1+2*Alphag*uj+alphag^2*uj*uj))
+        Ai <- (uj/(1+Alphag*uj))+(Y-uj)*(Alphag*uj/(1+2*Alphag*uj+alphag^2*uj*uj))
         Ai <- ifelse(Ai<=0, E^-5, Ai)
-        zj <- nj+(y-uj)/(Ai*(1+Alphag*uj))-Offset
-        #print(nj)
-        if (det(t(x)%*%(Ai*x))==0){
+        zj <- nj+(Y-uj)/(Ai*(1+Alphag*uj))-Offset
+        if (det(t(X)%*%(Ai*X))==0){
           bg <- rep(0, nvarg)
         }
         else{
-          bg <- solve(t(x)%*%(Ai*x))%*%t(x)%*%(Ai*zj)
-          #print(zj)
+          bg <- solve(t(X)%*%(Ai*X))%*%t(X)%*%(Ai*zj)
         }
-        #print(bg)
-        nj <- x%*%bg+Offset
+        nj <- X%*%bg+Offset
         nj <- ifelse(nj>E^2, E^2, nj)
         uj <- exp(nj)
         olddev <- devg
         uj <- ifelse(uj<E^-150, E^-150, uj)
-        tt <- y/uj
+        tt <- Y/uj
         tt <- ifelse(tt==0, E^-10, tt)
         if (toupper(MODEL)=="POISSON"){
-          devg <- 2*sum(y*log(tt)-(y-uj))
-          #print(tt)
+          devg <- 2*sum(Y*log(tt)-(Y-uj))
         }
         else{
-          devg <- 2*sum(y*log(tt)-(y+1/Alphag)*log((1+Alphag*y)/(1+Alphag*uj)))
+          devg <- 2*sum(Y*log(tt)-(Y+1/Alphag)*log((1+Alphag*Y)/(1+Alphag*uj)))
           sealphag <- sqrt(1/abs(hess))/(Parg^2)
         }
         if (cont2>100){
@@ -177,7 +172,6 @@ mgwnbr <- function(DATA, YVAR, XVAR, WEIGHT=NULL, LAT, LONG,
           ddev <- devg-olddev
         }
         cont2 <- cont2+1
-        #print(ddev)
       }
       #linha 128
       Ujg <- uj
@@ -185,11 +179,11 @@ mgwnbr <- function(DATA, YVAR, XVAR, WEIGHT=NULL, LAT, LONG,
       cont <- cont+1
       ddpar <- Parg-parold
     }
-    varg <- vecdiag(solve(t(x*Wt*Ai)%*%x))
+    varg <- vecdiag(solve(t(X*Wt*Ai)%*%X))
   }
   #linha 136
   else if (toupper(MODEL)=="LOGISTIC"){
-    uj <- (y+mean(y))/2
+    uj <- (Y+mean(Y))/2
     nj <- log(uj/(1-uj))
     devg <- 0
     ddev <- 1
@@ -198,33 +192,31 @@ mgwnbr <- function(DATA, YVAR, XVAR, WEIGHT=NULL, LAT, LONG,
       uj <- ifelse(uj>E^100, E^100, uj)
       Ai <- uj*(1-uj)
       Ai <- ifelse(Ai<=0, E^-5, Ai)
-      zj <- nj+(y-uj)/Ai
-      if (det(t(x)%*%(Wt*Ai*x))==0){
+      zj <- nj+(Y-uj)/Ai
+      if (det(t(X)%*%(Wt*Ai*X))==0){
         bg <- rep(0, nvarg)
       }
       else{
-        bg <- solve(t(x)%*%(Wt*Ai*x))%*%t(x)%*%(Wt*Ai*zj)
+        bg <- solve(t(X)%*%(Wt*Ai*X))%*%t(X)%*%(Wt*Ai*zj)
       }
-      nj <- x%*%bg
+      nj <- X%*%bg
       nj <- ifelse(nj>E^2, E^2, nj)
       uj <- exp(nj)/(1+exp(nj))
       olddev <- devg
       uj <- ifelse(uj<E^-150, E^-150, uj)
-      tt <- y/uj
+      tt <- Y/uj
       tt <- ifelse(tt==0, E^-10, tt)
       uj <- ifelse(uj==1, 0.99999, uj)
-      tt2 <- (1-y)/(1-uj)
+      tt2 <- (1-Y)/(1-uj)
       tt2 <- ifelse(tt2==0, E^-10, tt2)
-      devg <- 2*sum((y*log(tt))+(1-y)*log(tt2))
+      devg <- 2*sum((Y*log(tt))+(1-Y)*log(tt2))
       ddev <- devg-olddev
       cont <- cont+1
     }
     Ujg <- uj
     Yhat <- uj
-    varg <- vecdiag(solve(t(x*Wt*Ai)%*%x))
+    varg <- vecdiag(solve(t(X*Wt*Ai)%*%X))
   }
-  #print(bg) #teste
-  #print(Alphag)
   #linha 167
   LONG <- DATA[, LONG]
   LAT <- DATA[, LAT]
@@ -286,7 +278,7 @@ mgwnbr <- function(DATA, YVAR, XVAR, WEIGHT=NULL, LAT, LONG,
         else{
           b <- solve(t(x)%*%(w*x*wt))%*%t(x)%*%(w*y*wt)
         }
-        yhat[i] <- x[i, ]*b
+        yhat[i] <- x[i, ]%*%b
         if (det(t(x)%*%(w*x*wt))==0){
           S[i] <- 0
         }
@@ -501,15 +493,15 @@ mgwnbr <- function(DATA, YVAR, XVAR, WEIGHT=NULL, LAT, LONG,
     if (toupper(GLOBALMIN)=="NO"){
       lower <- ax
       upper <- bx
-      xmin <- rep(0, 2)
-      GMY <- 1 #não é atualizado
+      xmin <- matrix(0, 1, 2)
+      GMY <- 1
       ax1 <- lower[GMY]
       bx1 <- upper[GMY]
       h0 <- ax1
       h3 <- bx1
       h1 <- bx1-r*(bx1-ax1)
       h2 <- ax1+r*(bx1-ax1)
-      #print c(h0, h1, h2, h3)
+      #print(c(h0, h1, h2, h3))
       res1 <- cv(h1, depy, indepx, fix)
       CV1 <- res1[1]
       res2 <- cv(h2,depy,indepx,fix)
@@ -533,29 +525,29 @@ mgwnbr <- function(DATA, YVAR, XVAR, WEIGHT=NULL, LAT, LONG,
           CV1 <- res1[1]
         }
         int <- int+1
+        print(c(h0, h1, h2, h3, CV1, CV2))
       }
       if (CV1<CV2){
         golden <- CV1
-        xmin[1] <- golden #tirei GMY
-        xmin[2] <- h1
+        xmin[GMY, 1] <- golden #tirei GMY
+        xmin[GMY, 2] <- h1
         npar <- res1[1]
         if (toupper(METHOD)=="ADAPTIVE_BSQ"){
-          xmin[2] <- floor(h1)
-          xming <- xmin[2]
+          xmin[GMY, 2] <- floor(h1)
+          xming <- xmin[GMY, 2]
         }
       }
       else{
         golden <- CV2
-        xmin[1] <- golden
-        xmin[2] <- h2
+        xmin[GMY, 1] <- golden
+        xmin[GMY, 2] <- h2
         npar <- res2[1]
         if (toupper(METHOD)=="ADAPTIVE_BSQ"){
-          xmin[2] <- floor(h2)
-          xming <- xmin[2]
+          xmin[GMY, 2] <- floor(h2)
+          xming <- xmin[GMY, 2]
         }
       }
-      xming <- xmin[2]
-      #print(golden)
+      xming <- xmin[GMY, 2]
       #print((xmin[GMY,2])['xmin']) --> verificar
       #if (toupper(BANDWIDTH)=="AIC"){print(npar)}
     }
@@ -897,6 +889,8 @@ mgwnbr <- function(DATA, YVAR, XVAR, WEIGHT=NULL, LAT, LONG,
       m1 <- (i-1)*nvar+1
       m2 <- m1+(nvar-1)
       bim[m1:m2] <- b
+      print("b")
+      print(b)
       yhatm[i] <- uj[i]
       yhat[i] <- uj[i]
     } #linha 634
@@ -909,49 +903,109 @@ mgwnbr <- function(DATA, YVAR, XVAR, WEIGHT=NULL, LAT, LONG,
     finb <- rep(0, N)
     Yhat_beta <- Offset
     if (!is.null(H)){
-      h <- H
+      hh <- H
     }
     else{
-      h <- GSS(y,x,finb)
+      hh <- GSS(Y,X,finb)
     }
-    print(c("General Bandwidth", h))
-    Yhat_beta <- gwr(h,y,x,finb)
-    beta <- Yhat_beta[,2:nvarg+1]
-    print("x")
-    print(x)
-    print(class(x))
-    print(dim(x))
-    print("beta")
-    print(beta)
-    print(class(beta))
-    print(dim(beta))
-    fi <- x%*%beta
-    mband <- h
+    print(c("General Bandwidth", hh))
+    Yhat_beta <- gwr(hh,Y,X,finb)
+    beta <- Yhat_beta[,2:(nvarg+1)]
+    Fi <- X%*%beta
+    mband <- hh
     Sm2 <- sm
   }
   else{
     finb <- rep(0, N)
     Yhat_beta <- Offset
     if (!is.null(H)){
-      h <- H
+      hh <- H
     }
     else{
-      h <- GSS(y,x,finb)
+      hh <- GSS(Y,X,finb)
     }
-    print(c("General Bandwidth", h))
+    print(c("General Bandwidth", hh))
+    #computing residuals
+    #linha 672
+    Yhat_beta <- gwr(hh, Y, X, finb)
+    print(Yhat_beta)
+    # error <- Y-Yhat_beta[ ,1]
+    # beta <- Yhat_beta[ ,2:(nvarg+1)]
+    # Fi <- X*beta
+    # Sm2 <- sm
+    # for (jj in 1:nvarg){
+    #   m1 <- (jj-1)*N+1
+    #   m2 <- m1+(N-1)
+    #   #print (trace(mrj[,m1:m2]))
+    # }
+    # mband <- rep(hh, nvarg)
+    # socf <- 1
+    # int <- 1
+    # mband_socf <- c(mband, socf)
+    # #aqui
+    # while (socf>0.001 & int<INT){
+    #   fi_old <- Fi
+    #   diffi <- 0
+    #   fi2 <- 0
+    #   for (i in 1:nvarg){
+    #     if (toupper(MODEL)=="GAUSSIAN"){
+    #       ferror <- error+Fi[,i]
+    #       if (!is.null(H)){
+    #         mband[i] <- H
+    #       }
+    #       else{
+    #         mband[i] <- GSS(ferror, as.matrix(X[,i]), finb)
+    #       }
+    #       Yhat_beta <- gwr(mband[i], ferror, as.matrix(X[,i]), finb)
+    #       beta[,i] <- Yhat_beta[,2]
+    #       Fi[,i] <- X[,i]*beta[,i]
+    #       error <- Y-apply(Fi, 1, sum)
+    #       m1 <- (i-1)*N+1
+    #       m2 <- m1+(N-1)
+    #       mRj2 <- mrj[,m1:m2]
+    #       mrj[,m1:m2] <- rj%*%mrj[,m1:m2]+rj-rj%*%sm
+    #       sm <- sm-mRj2+mrj[,m1:m2]
+    #       Cm[,m1:m2] <- (1/X[,i])*mrj[,m1:m2]
+    #     }
+    #     if (toupper(MODEL)=="POISSON" | toupper(MODEL)=="NEGBIN" | toupper(MODEL)=="LOGISTIC"){
+    #       Yhat_beta <- (apply(Fi, 1, sum)+Offset)
+    #       if (!is.null(H)){
+    #         mband[i] <- H
+    #       }
+    #       else{
+    #         mband[i] <- GSS(Y, as.matrix(X[,i]), Fi[,i])
+    #       }
+    #       Yhat_beta <- gwr(mband[i], Y, as.matrix(X[,i]), Fi[,i])
+    #       beta[,i] <- Yhat_beta[,2]
+    #       #print (Yhat_beta[:])(_beta_[:,]) (Alphai[:,2])
+    #       Fi[,i] <- X[,i]*beta[,i]
+    #       #error=Y-exp(Fi[,+]+Offset)
+    #       m1 <- (i-1)*N+1
+    #       m2 <- m1+(N-1)
+    #       mRj2 <- mrj[,m1:m2]
+    #       mrj[,m1:m2] <- rj%*%mrj[,m1:m2]+rj-rj%*%sm
+    #       sm <- sm-mRj2+mrj[,m1:m2]
+    #       Cm[,m1:m2] <- (1/X[,i])*mrj[,m1:m2]
+    #       mAi[,i] <- Ai
+    #     }
+    #     diffi <- diffi+mean((Fi[,i]-fi_old[,i])^2)
+    #     fi2 <- fi2+Fi[,i]
+    #   }
+    #   socf <- sqrt(diffi/sum(fi2^2))
+    #   int <- int+1
+    #   mband_socf <- rbind(mband_socf, c(mband, socf))
+    # }
+    # band <<- as.data.frame(mband_socf, col.names=c("Intercept", names(X), "socf"))
   }
 }
 
 #ifs por else ifs
 #conferir ; choose j inv = * E do substituições (distan)
 
-#checar argumentos gwr e GSS
+#checar argumentos cv, gwr e GSS (dentro e fora)
 
 ## Testes ##
 mgwnbr(DATA=georgia_data_std, YVAR="PctBach",
      XVAR=c("PctBlack", "PctFB", "TotPop90", "PctEld"),
      LAT="Y", LONG="X", GLOBALMIN="no", METHOD="adaptive_bsq",
      BANDWIDTH="cv", MODEL="gaussian")
-
-#investigar valor diferente de h
-#perguntar sobre dimensões do x*beta
