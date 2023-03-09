@@ -54,9 +54,9 @@ mod3 <- lm(PctBach~PctBlack+PctFB+TotPop90+PctEld, data=georgia_data_std)
 summary(mod3)
 
 mgwnbr <- function(DATA, YVAR, XVAR, WEIGHT=NULL, LAT, LONG,
-                 GLOBALMIN="yes", METHOD, MODEL="GAUSSIAN",
-                 MGWR="yes", BANDWIDTH="CV", OFFSET=NULL,
-                 DISTANCEKM="NO", INT=50, H=NULL){
+                   GLOBALMIN="yes", METHOD, MODEL="GAUSSIAN",
+                   MGWR="yes", BANDWIDTH="CV", OFFSET=NULL,
+                   DISTANCEKM="NO", INT=50, H=NULL){
   Yhat_beta <- NULL
   E <- 10
   Y <- DATA[, YVAR]
@@ -641,15 +641,17 @@ mgwnbr <- function(DATA, YVAR, XVAR, WEIGHT=NULL, LAT, LONG,
       }
       u <- nrow(distan)
       w <- rep(0, u)
-      for (jj in 1:u){ #melhor trocar as condições para fora do loop?
-        if (toupper(METHOD)=="FIXED_G"){
+      if (toupper(METHOD)=="FIXED_G"){
+        for (jj in 1:u){
           w[jj] <- exp(-(distan[jj,3]/h)^2)
         }
-        else if (toupper(METHOD)=="FIXED_BSQ"){
+      }
+      else if (toupper(METHOD)=="FIXED_BSQ"){
+        for (jj in 1:u){
           w[jj] <- (1-(distan[jj,3]/h)^2)^2
         }
       }
-      if (toupper(METHOD)=="ADAPTIVE_BSQ"){ #linha 457
+      else if (toupper(METHOD)=="ADAPTIVE_BSQ"){ #linha 457
         distan <- distan[order(distan[, 3]), ]
         distan <- cbind(distan, 1:nrow(distan))
         w <- matrix(0, n, 2)
@@ -1002,8 +1004,8 @@ mgwnbr <- function(DATA, YVAR, XVAR, WEIGHT=NULL, LAT, LONG,
 ## Testes ##
 startTime <- Sys.time()
 mgwnbr(DATA=georgia_data_std, YVAR="PctBach",
-     XVAR=c("PctBlack", "PctFB", "TotPop90", "PctEld"),
-     LAT="Y", LONG="X", GLOBALMIN="no", METHOD="adaptive_bsq",
-     BANDWIDTH="cv", MODEL="gaussian")
+       XVAR=c("PctBlack", "PctFB", "TotPop90", "PctEld"),
+       LAT="Y", LONG="X", GLOBALMIN="no", METHOD="adaptive_bsq",
+       BANDWIDTH="cv", MODEL="gaussian")
 endTime <- Sys.time()
 # 31.24 minutos
