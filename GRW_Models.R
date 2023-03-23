@@ -1,6 +1,6 @@
 ########################## GRW MODELS ##########################
 
-# Macro for searching the optimum Bandwidth
+# Function for searching the optimum Bandwidth
 # 
 # REQUIRED PARAMETERS
 # DATA = the name of the SAS data set to be used
@@ -24,20 +24,20 @@ library(readr)
 library(dplyr)
 
 golden2 <- function(DATA,YVAR, XVAR, XVARGLOBAL, WEIGHT=NULL, LAT, LONG, 
-                    GLOBALMIN='YES', METHOD, MODEL="GAUSSIAN", BANDWIDTH,
+                    GLOBALMIN='YES', METHOD, MODEL="GAUSSIAN", BANDWIDTH='CV',
                     OFFSET=NULL,DISTANCEKM="NO"){
   # distancekm, model e offset = default
   E <- 10
-  yy <- DATA[, YVAR]
-  xx <- DATA[, which(names(DATA) %in% XVAR)]
-  N <- length(yy)
+  yy <- DATA[,YVAR]
+  xx <- DATA[,which(names(DATA) %in% XVAR)]
+  N <- nrow(yy)
   Wt <-rep(1, N)
   if (!is.null(WEIGHT)){
     Wt <- as.matrix(WEIGHT)
   }
-  offset <- rep(0, N)
+  Offset <- rep(0, N)
   if (!is.null(OFFSET)){
-    offset <- as.matrix(OFFSET)
+    Offset <- as.matrix(OFFSET)
   }
   xx <- as.matrix(cbind(rep(1,N),xx))
   Nvar <- ncol(xx)
@@ -90,14 +90,14 @@ golden2 <- function(DATA,YVAR, XVAR, XVARGLOBAL, WEIGHT=NULL, LAT, LONG,
         uj <- ifelse(uj>E^100,E^100,uj)
         Ai <- (uj/(1+alphag*uj))+(yy-uj)*(alphag*uj/1+2*alphag*uj+alphag^2*uj*uj)
         Ai <- ifelse(Ai<=0,E^-5,Ai)
-        zj <- nj+(yy-uj)/(Ai*(1+alphag*uj))-offset
+        zj <- nj+(yy-uj)/(Ai*(1+alphag*uj))-Offset
         if (det(t(xx)%*%(Ai*xx))==0){
           bg <- rep(0,Nvar)
         }
         else{
           bg <- solve(t(xx)%*%(Ai*xx))%*%t(xx)%*%(Ai*zj)
         }
-        nj <- xx%*%bg+offset
+        nj <- xx%*%bg+Offset
         nj <- ifelse(nj>E^2,E^2,nj)
         uj <- exp(nj)
         olddev <- devg
@@ -128,20 +128,19 @@ golden2 <- function(DATA,YVAR, XVAR, XVARGLOBAL, WEIGHT=NULL, LAT, LONG,
   LAT  <- DATA[, LAT]
   COORD <- matrix(c(GeorgiaData$Longitud,GeorgiaData$Latitude),ncol=2)
   View(COORD)
-  distance <- dist(COORD,"euclidean")
-  View(distance)
-  print(distance)
-  Seq <- 1:N
-  print(N)
+  Distance <- dist(COORD,"euclidean")
+  View(Distance)
+  Sequ <- 1:N
+  nn <- c()
   cv <- function(h, wt=Wt, nn=N, x=xx, xa=xa, y=yy,
                  ujg=Ujg, yhat=Yhat, nvar=Nvar, hv=hv,
-                 coord=coord, Distance=distance, seq=Seq,
-                 Offset=offset, Alpha=alphag, alphai=Alphai,
+                 coord=COORD, distance=Distance, sequ=Sequ,
+                 offset=Offset, Alpha=alphag, alphai=Alphai,
                  S0=S, Parg=parg){
     for (i in 1:nn){ 
       for(j in 1:nn){
         seqi <- rep(i,nn)
-        distan <<- cbind(seqi, Seq, as.matrix(distance[,i]))
+        distan <<- cbind(seqi, sequ, as.matrix(distance)[,i])
         if(toupper(DISTANCEKM)=="YES"){
           distan[,3] <<- distan[,3]*111
         }
@@ -149,7 +148,8 @@ golden2 <- function(DATA,YVAR, XVAR, XVARGLOBAL, WEIGHT=NULL, LAT, LONG,
       u <- nrow(distan)
       w <- rep(0,u)
       for(jj in 1:u){
-        w[jj] <- exp(-0.5*(dist[jj,3]/h)^2)
+        w[jj] <- exp(-0.5*(distan[jj,3]/h)^2)
+        print(w)
         if(toupper(BANDWIDTH)=="CV"){
           w[i] <-0
         }
@@ -171,7 +171,7 @@ golden2 <- function(DATA,YVAR, XVAR, XVARGLOBAL, WEIGHT=NULL, LAT, LONG,
           else{
             w[jj,1] <- 0
           }
-          w[jj,2] <- dist[jj,2]
+          w[jj,2] <- distan[jj,2]
         }
         if(toupper(BANDWIDTH)=="CV"){
           w[which(w[,2]==i)] <- 0
@@ -620,7 +620,7 @@ golden2 <- function(DATA,YVAR, XVAR, XVARGLOBAL, WEIGHT=NULL, LAT, LONG,
   else if(toupper(METHOD)=="ADAPTIVE_BSQ"){
     ax <- 5
     bx <- nn
-    print(nn)
+    #print(nn)
   }
   r <<- 0.61803399
   tol <<- 0.1
@@ -703,6 +703,58 @@ golden2 <- function(DATA,YVAR, XVAR, XVARGLOBAL, WEIGHT=NULL, LAT, LONG,
   }
 } #fecha golden
 
+# Function for estimating GWR Model
+# REQUIRED PARAMETERS
+# DATA = the name of the SAS data set to be used
+# YVAR = the name of the dependent or response variable
+# XVAR = the name of the independent or explicative variables. A blank space should separate the names. Note: an intercept variable must not be created in advance
+# WEIGHT = the name of the sample weight variable 
+# DCOORD = the name of the SAS data set with the geographic coordinates
+# GRID = the name of the SAS data set with the grid of geographic coordinates
+#       the standard errors of complex data
+# DHV = the name of the SAS data set with the bandwidth adaptive ($n$ values),
+#       which must have an unique variable
+# H = A pre-defined bandwidth value for METHOD equal to FIXED or ADAPTIVE1
+# MAXV = the maximum distance between two locations i and k to be consider
+# METHOD = there are three choices:
+#           FIXED_G asks the program to compute the bandwidth as fixed gaussian;
+#           FIXED_BSQ to compute the bandwidth as fixed bi-square; 
+#           ADAPTIVEN to compute the bandwidth as adaptive bi-square ($n$ values) and
+#           ADAPTIVE_BSQ to compute the bandwidth as adaptive bi-square ($one$ value)
+# DISTANCEKM = if the distances between two locations will be computed in Km
+#               using the Basic formulae for calculating spherical distance. The 
+#               default value is NO, so the distance is computed using euclidian
+#               distance.
+
+GWR <- function(DATA, YVAR, XVAR, WEIGHT=NULL, LAT, LONG,
+                METHOD, MODEL="GAUSSIAN",OFFSET=NULL,
+                DISTANCEKM="NO", H=NULL){#falta incluir xvarglobal, xvarinf, grid, dhv
+  yy <- DATA[,YVAR]
+  xx <- DATA[,which(names(DATA) %in% XVAR)]
+  N <- nrow(yy)
+  xx <- as.matrix(cbind(rep(1,N),xx))
+  Yhat <- rep(0,N)
+  Nvar <- ncol(xx)
+  if (!is.null(XVARGLOBAL)){
+    xa <- as.matrix(XVARGLOBAL)
+  }
+  Wt <-rep(1, N)
+  if (!is.null(WEIGHT)){
+    Wt <- as.matrix(WEIGHT)
+  }
+  Offset <- rep(0, N)
+  if (!is.null(OFFSET)){
+    Offset <- as.matrix(OFFSET)
+  }
+  
+  # global estimates #
+  
+  
+} #fecha GWR
+
+
+
+
 # trocas ----
 # position ---- posit
 # _dist_   ---- distance
@@ -725,14 +777,6 @@ golden2(GeorgiaData,
         GLOBALMIN='YES',
         METHOD="ADAPTIVE_BSQ", 
         DISTANCEKM="YES") 
-
-
-
-# %Golden(DATA=Georgiadata,YVAR=PctBach,XVAR=TotPop90 PctRural PctEld PctFB PctPov PctBlack,
-#        LONG=x,LAT=y,OUTPUT=band,METHOD=ADAPTIVE_BSQ,DISTANCEKM=YES);
-
-# %macro Golden(DATA=,YVAR=,XVAR=,XVARGLOBAL=,WEIGHT=,LAT=,LONG=,OUTPUT=,GLOBALMIN=YES,METHOD=,MODEL=GAUSSIAN,BANDWIDTH=CV,OFFSET=,DISTANCEKM=NO);
-
 
 
 
