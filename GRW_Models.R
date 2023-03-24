@@ -81,7 +81,7 @@ golden2 <- function(DATA,YVAR, XVAR, XVARGLOBAL, WEIGHT=NULL, LAT, LONG,
             dpar <- 0
           }
         }  
-          alphag <- 1/parg
+        alphag <- 1/parg
       }
       devg <- 0
       ddev <- 1
@@ -608,7 +608,7 @@ golden2 <- function(DATA,YVAR, XVAR, XVARGLOBAL, WEIGHT=NULL, LAT, LONG,
     } # fecha for da linha 148
   } # fecha CV
   
-# DEFINING GOLDEN SECTION SEARCH PARAMETERS #
+  # DEFINING GOLDEN SECTION SEARCH PARAMETERS #
   
   if(toupper(METHOD)=="FIXED_G"|toupper(METHOD)=="FIXED_BSQ"){
     ax <- 0
@@ -648,13 +648,13 @@ golden2 <- function(DATA,YVAR, XVAR, XVARGLOBAL, WEIGHT=NULL, LAT, LONG,
   h2 <- ax1-r*(bx1-ax1)
   print(c("h0,h1,h2,h3: ", c(h0,h1,h2,h3)))
   
-# /***************************************/ #
-
+  # /***************************************/ #
+  
   res1 <- cv(h1)
   CV1 <- res1[1]
   res2 <- cv(h2)
   CV2 <- res2[1]
-
+  
   if(toupper(METHOD)=="FIXED_G"|toupper(METHOD)=="FIXED_BSQ"|toupper(METHOD)=="ADAPTIVE_BSQ"){
     var_ <<- data.frame()
     if(GMY==1){
@@ -729,26 +729,105 @@ golden2 <- function(DATA,YVAR, XVAR, XVARGLOBAL, WEIGHT=NULL, LAT, LONG,
 GWR <- function(DATA, YVAR, XVAR, WEIGHT=NULL, LAT, LONG,
                 METHOD, MODEL="GAUSSIAN",OFFSET=NULL,
                 DISTANCEKM="NO", H=NULL){#falta incluir xvarglobal, xvarinf, grid, dhv
+  E <- 10
   yy <- DATA[,YVAR]
   xx <- DATA[,which(names(DATA) %in% XVAR)]
   N <- nrow(yy)
   xx <- as.matrix(cbind(rep(1,N),xx))
   Yhat <- rep(0,N)
   Nvar <- ncol(xx)
-  if (!is.null(XVARGLOBAL)){
+  if(!is.null(XVARGLOBAL)){
     xa <- as.matrix(XVARGLOBAL)
   }
   Wt <-rep(1, N)
-  if (!is.null(WEIGHT)){
+  if(!is.null(WEIGHT)){
     Wt <- as.matrix(WEIGHT)
   }
   Offset <- rep(0, N)
-  if (!is.null(OFFSET)){
+  if(!is.null(OFFSET)){
     Offset <- as.matrix(OFFSET)
   }
   
   # global estimates #
-  
+  if(toupper(MODEL)=="POISSON"|toupper(MODEL)=="NEGBIN"){
+    x1 <- cbind(x,xa)
+    nvar1 <- ncol(x1)
+    uj <- (y+mean(y))/2
+    nj <- log(uj)
+    parg <- sum((y-uj)^2/uj)/(N-nvar1)
+    ddpar <- 1
+    cont <- 1
+    while(abs(ddpar)>0.00001|cont<100){
+      dpar <- 1
+      parold <- parg
+      cont1 <- 1
+      if(toupper(MODEL)=="POISSON"){
+        alphag <- E^(-6)
+        parg <- 1/(sum((y-uj)^2/uj)/(N-nvar1))
+      }
+      if(toupper(MODEL)=="NEGBIN"){
+        if(cont>1){
+          parg <- 1/(sum((y-uj)^2/uj)/(N-nvar1))
+        }
+        while(abs(dpar)>0.000001|cont1<200){
+          parg <- ifelse(parg<E^(-10),E^(-10),parg)
+          g <- sum(digamma(parg+yy)-digamma(parg)+log(parg)+1-log(parg+uj)-(parg+yy)/(parg+uj))
+          hess <- sum(trigamma(parg+yy)-trigamma(parg)+1/parg-2/(parg+uj)+(yy+parg)/((parg+uj)^2))
+          hess <- ifelse(hess==0, E^-23,hess)
+          par0 <- parg
+          parg <- par0-solve(hess)%*%g
+          dpar <- parg-par0
+          cont <- cont1+1
+          if(parg>E^6){
+            parg <- E^6
+            dpar <- 0
+          }
+        }  
+        alphag <- 1/parg
+      }
+      devg <- 0
+      ddev <- 1
+      cont2 <- 0
+      while(abs(ddev)>0.000001|cont2<100){
+        uj <- ifelse(uj>E^100,E^100,uj)
+        Ai <- (uj/(1+alphag*uj))+(yy-uj)*(alphag*uj/1+2*alphag*uj+alphag^2*uj*uj)
+        Ai <- ifelse(Ai<=0,E^-5,Ai)
+        zj <- nj+(yy-uj)/(Ai*(1+alphag*uj))-Offset
+        if (det(t(xx)%*%(Ai*xx))==0){
+          bg <- rep(0,Nvar)
+        }
+        else{
+          bg <- solve(t(xx)%*%(Ai*xx))%*%t(xx)%*%(Ai*zj)
+        }
+        nj <- xx%*%bg+Offset
+        nj <- ifelse(nj>E^2,E^2,nj)
+        uj <- exp(nj)
+        olddev <- devg
+        uj <- ifelse(uj<E^-150,E^-150,uj)
+        tt <- yy/yj
+        tt <- ifelse(tt==0,E^-10,tt)
+        if(toupper(MODEL)=="POISSON"){
+          devg <- 2*sum(y*log(tt)-(yy-uj))
+        }
+        if(toupper(MODEL)=="NEGBIN"){
+          devg <- 2*sum(yy*log(tt)-(yy+1/alphag)*log((1+alphag*yy)/(1+alphag*uj)))
+        }
+        if (cont2>100){
+          ddev <- 0.0000001
+        }
+        else{
+          ddev <- devg-olddev
+          cont2 <- cont2+1
+        }
+      }
+      Ujg <- uj
+      cont <- cont+1
+      ddpar <- parg-parold
+      }
+    } #REVISAR 
+    }
+  }
+  } #? 
   
 } #fecha GWR
 
@@ -777,13 +856,3 @@ golden2(GeorgiaData,
         GLOBALMIN='YES',
         METHOD="ADAPTIVE_BSQ", 
         DISTANCEKM="YES") 
-
-
-
-
-
-
-
-
-
-
