@@ -1,36 +1,14 @@
-########################## GRW MODELS ##########################
-
-# Function for searching the optimum Bandwidth
-# 
-# REQUIRED PARAMETERS
-# DATA = the name of the SAS data set to be used
-# YVAR = the name of the dependent or response variable
-# XVAR = the name of the independent or explicative variables. 
-# A blank space should separate the names. Note: an intercept variable must not be created in advance
-# DCOORD = the name of the SAS data set with the geographic coordinates
-# OUTPUT = the name of the SAS data set to be used as output results
-# MINV = the minimum distance between two locations i and k to be consider
-# MIDDLEV = the middle distance between two locations i and k to be consider
-# MAXV = the maximum distance between two locations i and k to be consider
-# METHOD = there are three choices:
-# FIXED_G asks the program to compute the bandwidth as fixed gaussian;
-# FIXED_BSQ to compute the bandwidth as fixed bi-square; 
-# ADAPTIVEN to compute the bandwidth as adaptive bi-square ($n$ values) and
-# ADAPTIVE_BSQ to compute the bandwidth as adaptive bi-square ($one$ value)
-# DISTANCEKM = if the distances between two locations will be computed in Km using the Basic formula for calculating spherical distance. 
-# The default value is NO, so the distance is computed using euclidean distance.
-
 library(readr)
 library(dplyr)
 
-golden2 <- function(DATA,YVAR, XVAR, XVARGLOBAL, WEIGHT=NULL, LAT, LONG, 
-                    GLOBALMIN='YES', METHOD, MODEL="GAUSSIAN", BANDWIDTH='CV',
+golden <- function(DATA,YVAR, XVAR, XVARGLOBAL, WEIGHT=NULL, LAT, LONG, 
+                    GLOBALMIN='YES', METHOD, MODEL="NEGBIN", BANDWIDTH='CV',
                     OFFSET=NULL,DISTANCEKM="NO"){
   # distancekm, model e offset = default
   E <- 10
   yy <- DATA[,YVAR]
-  xx <- DATA[,which(names(DATA) %in% XVAR)]
-  N <- nrow(yy)
+  xx <- DATA[,XVAR]
+  N <<- nrow(yy)
   Wt <-rep(1, N)
   if (!is.null(WEIGHT)){
     Wt <- as.matrix(WEIGHT)
@@ -44,43 +22,42 @@ golden2 <- function(DATA,YVAR, XVAR, XVARGLOBAL, WEIGHT=NULL, LAT, LONG,
   if (!is.null(XVARGLOBAL)){
     xa <- as.matrix(XVARGLOBAL)
   }
-  Yhat <- rep(0,N)
+  Yhat <- matrix(0,N,1)
   Alphai <- matrix(0, N, 1)
-  S <- rep(0,N)
+  S <- matrix(0,N,1)
   
   # global estimates #
-  if (toupper(MODEL)=="POISSON" | toupper(MODEL)=="NEGBIN"){
-    uj <- (yy+mean(yy))/2
-    nj <- log(uj)
-    parg <- sum((yy-uj)^2/uj)/(N-Nvar)
-    ddpar <- 1
-    cont <- 1
-    while (abs(ddpar)>0.000001 & cont<100){
-      dpar <- 1
-      parold <- parg
-      cont1 <- 1
-      if (toupper(MODEL)=="POISSON"){
-        alphag <- E^-6
-        parg <- 1/alphag
+  uj <- (yy+mean(yy))/2
+  nj <- log(uj)
+  parg <- sum((yy-uj)^2/uj)/(N-Nvar)
+  ddpar <- 1
+  cont <- 1
+  while (abs(ddpar)>0.000001 & cont<100){
+    dpar <- 1
+    parold <- parg
+    cont1 <- 1
+    if (toupper(MODEL)=="POISSON"){
+      alphag <- E^-6
+      parg <- 1/alphag
+    }
+    if (toupper(MODEL)=="NEGBIN"){
+      if (cont>1){
+        parg <- 1/(sum((yy-uj)^2/uj)/(N-Nvar))
       }
-      if (toupper(MODEL)=="NEGBIN"){
-        if (cont>1){
-          parg <- 1/(sum((yy-uj)^2/uj)/(N-Nvar))
+      while (abs(dpar)>0.000001 & cont1<200){
+        parg <- ifelse(parg<E^-10,E^-10,parg)
+        g <- sum(digamma(parg+yy)-digamma(parg)+log(parg)+1-log(parg+uj)-(parg+yy)/(parg+uj))
+        hess <- sum(trigamma(parg+yy)-trigamma(parg)+1/parg-2/(parg+uj)+(yy+parg)/((parg+uj)^2))
+        hess <- ifelse(hess==0, E^-23,hess)
+        par0 <- parg
+        parg <- par0-solve(hess)%*%g
+        dpar <- parg-par0
+        cont <- cont1+1
+        if(parg>E^6){
+          parg <- E^6
+          dpar <- 0
         }
-        while (abs(dpar)>0.000001 & cont1<200){
-          parg <- ifelse(parg<E^-10,E^-10,parg)
-          g <- sum(digamma(parg+yy)-digamma(parg)+log(parg)+1-log(parg+uj)-(parg+yy)/(parg+uj))
-          hess <- sum(trigamma(parg+yy)-trigamma(parg)+1/parg-2/(parg+uj)+(yy+parg)/((parg+uj)^2))
-          hess <- ifelse(hess==0, E^-23,hess)
-          par0 <- parg
-          parg <- par0-solve(hess)%*%g
-          dpar <- parg-par0
-          cont <- cont1+1
-          if(parg>E^6){
-            parg <- E^6
-            dpar <- 0
-          }
-        }  
+      }  
         alphag <- 1/parg
       }
       devg <- 0
@@ -121,17 +98,16 @@ golden2 <- function(DATA,YVAR, XVAR, XVARGLOBAL, WEIGHT=NULL, LAT, LONG,
       Ujg <- uj
       cont <- cont+1
       ddpar <- parg-parold
-    }
-  }
+    } #fecha while
   View(GeorgiaData)
   LONG <- DATA[, LONG]
   LAT  <- DATA[, LAT]
-  COORD <- matrix(c(GeorgiaData$Longitud,GeorgiaData$Latitude),ncol=2)
+  COORD <- matrix(c(GeorgiaData$Longitud,GeorgiaData$Latitude),ncol=2) #tentar outra solucao
   View(COORD)
   Distance <- dist(COORD,"euclidean")
   View(Distance)
   Sequ <- 1:N
-  nn <- c()
+  nn <- c() #solucao questionavel 
   cv <- function(h, wt=Wt, nn=N, x=xx, xa=xa, y=yy,
                  ujg=Ujg, yhat=Yhat, nvar=Nvar, hv=hv,
                  coord=COORD, distance=Distance, sequ=Sequ,
@@ -195,7 +171,7 @@ golden2 <- function(DATA,YVAR, XVAR, XVARGLOBAL, WEIGHT=NULL, LAT, LONG,
             S[i] <- (x[i,]%*%solve(t(x)%*%(w*x*wt))*t(x*w*wt))[i]
           }
           if(!is.null(xvarglobal)){
-            hat_matrix <- rbind(hat_matrix,(x[i,]%*%solve(t(x)%*%(w*x*wt))*t((x*w*wt)))) #criando hat_matrix aqui, entao supostamente nao haveria problema com dimensão
+            hat_matrix <- rbind(hat_matrix,(x[i,]%*%solve(t(x)%*%(w*x*wt))*t((x*w*wt)))) #criando hat_matrix aqui, entao supostamente nao haveria problema com dimens?o
             if(i==1){
               W_f <- cbind(matrix(i,N,1),w,t(seq(1,nrow(w)))) 
             }
@@ -420,7 +396,7 @@ golden2 <- function(DATA,YVAR, XVAR, XVARGLOBAL, WEIGHT=NULL, LAT, LONG,
               R_matrix <- rbind(R_matrix,(x[i,]*C))
               Z_matrix <- cbind(Z_matrix,(zj+offset+xa*ba))
               yhat[i] <- uj[i]
-            } #fecha laço for
+            } #fecha la?o for
             hat_matrix <- R_matrix%*%Z_matrix/diag(Z_matrix)
             uj <- yhat
             nj <- log(uj)
@@ -573,7 +549,7 @@ golden2 <- function(DATA,YVAR, XVAR, XVARGLOBAL, WEIGHT=NULL, LAT, LONG,
             R_matrix <- rbind(R_matrix,(x[i,]*C))
             Z_matrix <- rbind(Z_matrix,(zj+xa*ba))
             yhat[i] <- uj[i]
-          } # fecha o laço for
+          } # fecha o laco for
           hat_matrix <- R_matrix%*%Z_matrix/diag(Z_matrix)
           uj <- yhat
           nj <- log(uj/(1-uj))
@@ -603,7 +579,7 @@ golden2 <- function(DATA,YVAR, XVAR, XVARGLOBAL, WEIGHT=NULL, LAT, LONG,
         if(bandwidth=="AIC"){
           CV <- AICC
         } 
-      } # fecha modelo logístico  
+      } # fecha modelo logistico  
       res <- cbind(CV,npar)  
     } # fecha for da linha 148
   } # fecha CV
@@ -617,7 +593,7 @@ golden2 <- function(DATA,YVAR, XVAR, XVARGLOBAL, WEIGHT=NULL, LAT, LONG,
       bx <- bx*111
     } 
   }
-  else if(toupper(METHOD)=="ADAPTIVE_BSQ"){
+  if(toupper(METHOD)=="ADAPTIVE_BSQ"){
     ax <- 5
     bx <- nn
     #print(nn)
@@ -631,8 +607,7 @@ golden2 <- function(DATA,YVAR, XVAR, XVARGLOBAL, WEIGHT=NULL, LAT, LONG,
     GMY <- 1
     ax1 <- lower[GMY]
     bx1 <- upper[GMY]
-  }
-  else{ #globalmin=='yes'
+  } else{
     lower <- cbind(ax,(1-r)*bx,r*bx)
     upper <- cbind((1-r)*bx,r*bx,bx)
     xmin <- matrix(0,3,2)
@@ -641,7 +616,7 @@ golden2 <- function(DATA,YVAR, XVAR, XVARGLOBAL, WEIGHT=NULL, LAT, LONG,
       bx1 <- upper[GMY]
     }
   }
-  #revisar identação 
+  #revisar identacao 
   h0 <- ax1
   h3 <- bx1
   h1 <- bx1-r*(bx1-ax1)
@@ -703,32 +678,36 @@ golden2 <- function(DATA,YVAR, XVAR, XVARGLOBAL, WEIGHT=NULL, LAT, LONG,
   }
 } #fecha golden
 
-# Function for estimating GWR Model
-# REQUIRED PARAMETERS
-# DATA = the name of the SAS data set to be used
-# YVAR = the name of the dependent or response variable
-# XVAR = the name of the independent or explicative variables. A blank space should separate the names. Note: an intercept variable must not be created in advance
-# WEIGHT = the name of the sample weight variable 
-# DCOORD = the name of the SAS data set with the geographic coordinates
-# GRID = the name of the SAS data set with the grid of geographic coordinates
-#       the standard errors of complex data
-# DHV = the name of the SAS data set with the bandwidth adaptive ($n$ values),
-#       which must have an unique variable
-# H = A pre-defined bandwidth value for METHOD equal to FIXED or ADAPTIVE1
-# MAXV = the maximum distance between two locations i and k to be consider
-# METHOD = there are three choices:
-#           FIXED_G asks the program to compute the bandwidth as fixed gaussian;
-#           FIXED_BSQ to compute the bandwidth as fixed bi-square; 
-#           ADAPTIVEN to compute the bandwidth as adaptive bi-square ($n$ values) and
-#           ADAPTIVE_BSQ to compute the bandwidth as adaptive bi-square ($one$ value)
-# DISTANCEKM = if the distances between two locations will be computed in Km
-#               using the Basic formulae for calculating spherical distance. The 
-#               default value is NO, so the distance is computed using euclidian
-#               distance.
-
-GWR <- function(DATA, YVAR, XVAR, WEIGHT=NULL, LAT, LONG,
-                METHOD, MODEL="GAUSSIAN",OFFSET=NULL,
-                DISTANCEKM="NO", H=NULL){#falta incluir xvarglobal, xvarinf, grid, dhv
+# /*******************************************************************************/
+#   /* Macro for estimating GWR Model */
+#   /* REQUIRED PARAMETERS
+# /*    DATA = the name of the SAS data set to be used
+# /*    YVAR = the name of the dependent or response variable
+# /*    XVAR = the name of the independent or explicative variables. A blank space
+# /*           should separate the names. Note: an intercept variable must not be
+# /*           created in advance
+# /*   WEIGHT = the name of the sample weight variable 
+# /*  DCOORD = the name of the SAS data set with the geographic coordinates
+# /*    GRID = the name of the SAS data set with the grid of geographic coordinates
+# /*           the standard errors of complex data
+# /*     DHV = the name of the SAS data set with the bandwidth adaptive ($n$ values),
+# /*           which must have an unique variable
+# /*       H = A pre-defined bandwidth value for METHOD equal to FIXED or ADAPTIVE1
+# /*    MAXV = the maximum distance between two locations i and k to be consider
+# /*  METHOD = there are three choices:
+#   /*           FIXED_G asks the program to compute the bandwidth as fixed gaussian;
+# /*           FIXED_BSQ to compute the bandwidth as fixed bi-square; 
+# /*           ADAPTIVEN to compute the bandwidth as adaptive bi-square ($n$ values) and
+# /*			 ADAPTIVE_BSQ to compute the bandwidth as adaptive bi-square ($one$ value)
+# /*  DISTANCEKM = if the distances between two locations will be computed in Km
+# /*               using the Basic formulae for calculating spherical distance. The 
+# /*               default value is NO, so the distance is computed using euclidian
+# /*               distance.
+# /********************************************************************************/
+  
+GWR <- function(DATA, YVAR, XVAR, XVARGLOBAL, XVARINF, WEIGHT=NULL, LAT, LONG,
+                GRID, DHV, METHOD, MODEL="NEGBIN",OFFSET=NULL,
+                DISTANCEKM="NO", H=NULL){
   E <- 10
   yy <- DATA[,YVAR]
   xx <- DATA[,which(names(DATA) %in% XVAR)]
@@ -748,111 +727,88 @@ GWR <- function(DATA, YVAR, XVAR, WEIGHT=NULL, LAT, LONG,
     Offset <- as.matrix(OFFSET)
   }
   
-  # global estimates #
-  if(toupper(MODEL)=="POISSON"|toupper(MODEL)=="NEGBIN"){
-    x1 <- cbind(x,xa)
-    nvar1 <- ncol(x1)
-    uj <- (y+mean(y))/2
-    nj <- log(uj)
-    parg <- sum((y-uj)^2/uj)/(N-nvar1)
-    ddpar <- 1
-    cont <- 1
-    while(abs(ddpar)>0.00001|cont<100){
-      dpar <- 1
-      parold <- parg
-      cont1 <- 1
-      if(toupper(MODEL)=="POISSON"){
-        alphag <- E^(-6)
+  # global estimates # 
+  x1 <- cbind(x,xa)
+  nvar1 <- ncol(x1)
+  uj <- (y+mean(y))/2
+  nj <- log(uj)
+  parg <- sum((y-uj)^2/uj)/(N-nvar1)
+  ddpar <- 1
+  cont <- 1
+  while(abs(ddpar)>0.00001|cont<100){
+    dpar <- 1
+    parold <- parg
+    cont1 <- 1
+    if(toupper(MODEL)=="POISSON"){
+      alphag <- E^(-6)
+      parg <- 1/(sum((y-uj)^2/uj)/(N-nvar1))
+    }
+    if(toupper(MODEL)=="NEGBIN"){
+      if(cont>1){
         parg <- 1/(sum((y-uj)^2/uj)/(N-nvar1))
       }
-      if(toupper(MODEL)=="NEGBIN"){
-        if(cont>1){
-          parg <- 1/(sum((y-uj)^2/uj)/(N-nvar1))
+      while(abs(dpar)>0.000001|cont1<200){
+        parg <- ifelse(parg<E^(-10),E^(-10),parg)
+        g <- sum(digamma(parg+yy)-digamma(parg)+log(parg)+1-log(parg+uj)-(parg+yy)/(parg+uj))
+        hess <- sum(trigamma(parg+yy)-trigamma(parg)+1/parg-2/(parg+uj)+(yy+parg)/((parg+uj)^2))
+        hess <- ifelse(hess==0, E^-23,hess)
+        par0 <- parg
+        parg <- par0-solve(hess)%*%g
+        dpar <- parg-par0
+        cont <- cont1+1
+        if(parg>E^6){
+          parg <- E^6
+          dpar <- 0
         }
-        while(abs(dpar)>0.000001|cont1<200){
-          parg <- ifelse(parg<E^(-10),E^(-10),parg)
-          g <- sum(digamma(parg+yy)-digamma(parg)+log(parg)+1-log(parg+uj)-(parg+yy)/(parg+uj))
-          hess <- sum(trigamma(parg+yy)-trigamma(parg)+1/parg-2/(parg+uj)+(yy+parg)/((parg+uj)^2))
-          hess <- ifelse(hess==0, E^-23,hess)
-          par0 <- parg
-          parg <- par0-solve(hess)%*%g
-          dpar <- parg-par0
-          cont <- cont1+1
-          if(parg>E^6){
-            parg <- E^6
-            dpar <- 0
-          }
-        }  
-        alphag <- 1/parg
-      }
-      devg <- 0
-      ddev <- 1
-      cont2 <- 0
-      while(abs(ddev)>0.000001|cont2<100){
-        uj <- ifelse(uj>E^100,E^100,uj)
-        Ai <- (uj/(1+alphag*uj))+(yy-uj)*(alphag*uj/1+2*alphag*uj+alphag^2*uj*uj)
-        Ai <- ifelse(Ai<=0,E^-5,Ai)
-        zj <- nj+(yy-uj)/(Ai*(1+alphag*uj))-Offset
-        if (det(t(xx)%*%(Ai*xx))==0){
-          bg <- rep(0,Nvar)
-        }
-        else{
-          bg <- solve(t(xx)%*%(Ai*xx))%*%t(xx)%*%(Ai*zj)
-        }
-        nj <- xx%*%bg+Offset
-        nj <- ifelse(nj>E^2,E^2,nj)
-        uj <- exp(nj)
-        olddev <- devg
-        uj <- ifelse(uj<E^-150,E^-150,uj)
-        tt <- yy/yj
-        tt <- ifelse(tt==0,E^-10,tt)
-        if(toupper(MODEL)=="POISSON"){
-          devg <- 2*sum(y*log(tt)-(yy-uj))
-        }
-        if(toupper(MODEL)=="NEGBIN"){
-          devg <- 2*sum(yy*log(tt)-(yy+1/alphag)*log((1+alphag*yy)/(1+alphag*uj)))
-        }
-        if (cont2>100){
-          ddev <- 0.0000001
-        }
-        else{
-          ddev <- devg-olddev
-          cont2 <- cont2+1
-        }
-      }
-      Ujg <- uj
-      cont <- cont+1
-      ddpar <- parg-parold
-      }
-    } #REVISAR 
+      }  
+      alphag <- 1/parg
     }
+    devg <- 0
+    ddev <- 1
+    cont2 <- 0  
+    while(abs(ddev)>0.000001|cont2<100){
+      uj <- ifelse(uj>E^100,E^100,uj)
+      Ai <- (uj/(1+alphag*uj))+(yy-uj)*(alphag*uj/1+2*alphag*uj+alphag^2*uj*uj)
+      Ai <- ifelse(Ai<=0,E^-5,Ai)
+      zj <- nj+(yy-uj)/(Ai*(1+alphag*uj))-Offset
+      if (det(t(xx)%*%(Ai*xx))==0){
+        bg <- rep(0,Nvar)
+      }
+      else{
+        bg <- solve(t(xx)%*%(Ai*xx))%*%t(xx)%*%(Ai*zj)
+      }
+      nj <- xx%*%bg+Offset
+      nj <- ifelse(nj>E^2,E^2,nj)
+      uj <- exp(nj)
+      olddev <- devg
+      uj <- ifelse(uj<E^-150,E^-150,uj)
+      tt <- yy/yj
+      tt <- ifelse(tt==0,E^-10,tt)
+      if(toupper(MODEL)=="POISSON"){
+        devg <- 2*sum(y*log(tt)-(yy-uj))
+      }
+      if(toupper(MODEL)=="NEGBIN"){
+        devg <- 2*sum(yy*log(tt)-(yy+1/alphag)*log((1+alphag*yy)/(1+alphag*uj)))
+      }
+      if (cont2>100){
+        ddev <- 0.0000001
+      }
+      else{
+        ddev <- devg-olddev
+        cont2 <- cont2+1
+      }
+    }
+    Ujg <- uj
+    cont <- cont+1
+    ddpar <- parg-parold
   }
-  } #? 
+  varg <- diag(solve(t(x1*wt*Ai)%*%x1))
+  if(toupper(MODEL)=="NEGBIN"){
+    sealphag <- sqrt(1/abs(hess))/(parg^2)
+  }
+  
+# /*****************************************/ linha 586 SAS
+  
   
 } #fecha GWR
 
-
-
-
-# trocas ----
-# position ---- posit
-# _dist_   ---- distance
-# dist     ---- distan
-
-
-setwd('C:/Users/jehhv/OneDrive/Documentos/UnB/2022/2022.1/PIBIC')
-
-GeorgiaData <- read_csv("GWR/GeorgiaData.csv")
-View(GeorgiaData)
-
-
-golden2(GeorgiaData,
-        YVAR = 'PctBach',
-        XVAR = c('TotPop90','PctRural','PctEld','PctFB','PctPov','PctBlack'), 
-        XVARGLOBAL=NULL, 
-        WEIGHT=NULL, 
-        LAT='Latitude',
-        LONG='Longitud', 
-        GLOBALMIN='YES',
-        METHOD="ADAPTIVE_BSQ", 
-        DISTANCEKM="YES") 
