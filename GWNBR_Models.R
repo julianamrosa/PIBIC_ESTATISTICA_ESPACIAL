@@ -603,7 +603,7 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL, WEIGHT=NULL, LAT, LONG,
   if(toupper(GLOBALMIN)=="NO"){
     lower <- ax
     upper <- bx
-    xmin <- rep(0,2)
+    xmin <- matrix(0,1,2)
     GMY <- 1
     ax1 <- lower[GMY]
     bx1 <- upper[GMY]
@@ -811,4 +811,6 @@ GWR <- function(DATA, YVAR, XVAR, XVARGLOBAL, XVARINF, WEIGHT=NULL, LAT, LONG,
   
   
 } #fecha GWR
+
+
 
