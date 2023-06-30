@@ -1,9 +1,9 @@
 library(readr)
 library(dplyr)
 
-golden <- function(DATA,YVAR, XVAR, XVARGLOBAL, WEIGHT=NULL, LAT, LONG, 
-                    GLOBALMIN='YES', METHOD, MODEL="NEGBIN", BANDWIDTH='CV',
-                    OFFSET=NULL,DISTANCEKM="NO"){
+golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG, 
+                   GLOBALMIN='YES', METHOD, MODEL="NEGBIN", BANDWIDTH='CV',
+                   OFFSET=NULL,DISTANCEKM="NO"){
   # distancekm, model e offset = default
   E <- 10
   yy <- DATA[,YVAR]
@@ -53,52 +53,55 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL, WEIGHT=NULL, LAT, LONG,
         parg <- par0-solve(hess)%*%g
         dpar <- parg-par0
         cont <- cont1+1
+        print(parg)
         if(parg>E^6){
           parg <- E^6
           dpar <- 0
+        } else{
+          
         }
       }  
-        alphag <- 1/parg
+      alphag <- 1/parg
+    }
+    devg <- 0
+    ddev <- 1
+    cont2 <- 0
+    while (abs(ddev)>0.000001 & cont2<100){
+      uj <- ifelse(uj>E^100,E^100,uj)
+      Ai <- (uj/(1+alphag*uj))+(yy-uj)*(alphag*uj/1+2*alphag*uj+alphag^2*uj*uj)
+      Ai <- ifelse(Ai<=0,E^-5,Ai)
+      zj <- nj+(yy-uj)/(Ai*(1+alphag*uj))-Offset
+      if (det(t(xx)%*%(Ai*xx))==0){
+        bg <- rep(0,Nvar)
       }
-      devg <- 0
-      ddev <- 1
-      cont2 <- 0
-      while (abs(ddev)>0.000001 & cont2<100){
-        uj <- ifelse(uj>E^100,E^100,uj)
-        Ai <- (uj/(1+alphag*uj))+(yy-uj)*(alphag*uj/1+2*alphag*uj+alphag^2*uj*uj)
-        Ai <- ifelse(Ai<=0,E^-5,Ai)
-        zj <- nj+(yy-uj)/(Ai*(1+alphag*uj))-Offset
-        if (det(t(xx)%*%(Ai*xx))==0){
-          bg <- rep(0,Nvar)
-        }
-        else{
-          bg <- solve(t(xx)%*%(Ai*xx))%*%t(xx)%*%(Ai*zj)
-        }
-        nj <- xx%*%bg+Offset
-        nj <- ifelse(nj>E^2,E^2,nj)
-        uj <- exp(nj)
-        olddev <- devg
-        uj <- ifelse(uj<E^-150,E^-150,uj)
-        tt <- yy/yj
-        tt <- ifelse(tt==0,E^-10,tt)
-        if(toupper(MODEL)=="POISSON"){
-          devg <- 2*sum(y*log(tt)-(yy-uj))
-        }
-        if(toupper(MODEL)=="NEGBIN"){
-          devg <- 2*sum(yy*log(tt)-(yy+1/alphag)*log((1+alphag*yy)/(1+alphag*uj)))
-        }
-        if (cont2>100){
-          ddev <- 0.0000001
-        }
-        else{
-          ddev <- devg-olddev
-          cont2 <- cont2+1
-        }
+      else{
+        bg <- solve(t(xx)%*%(Ai*xx))%*%t(xx)%*%(Ai*zj)
       }
-      Ujg <- uj
-      cont <- cont+1
-      ddpar <- parg-parold
-    } #fecha while
+      nj <- xx%*%bg+Offset
+      nj <- ifelse(nj>E^2,E^2,nj)
+      uj <- exp(nj)
+      olddev <- devg
+      uj <- ifelse(uj<E^-150,E^-150,uj)
+      tt <- yy/yj
+      tt <- ifelse(tt==0,E^-10,tt)
+      if(toupper(MODEL)=="POISSON"){
+        devg <- 2*sum(y*log(tt)-(yy-uj))
+      }
+      if(toupper(MODEL)=="NEGBIN"){
+        devg <- 2*sum(yy*log(tt)-(yy+1/alphag)*log((1+alphag*yy)/(1+alphag*uj)))
+      }
+      if (cont2>100){
+        ddev <- 0.0000001
+      }
+      else{
+        ddev <- devg-olddev
+        cont2 <- cont2+1
+      }
+    }
+    Ujg <- uj
+    cont <- cont+1
+    ddpar <- parg-parold
+  } #fecha while
   View(GeorgiaData)
   LONG <- DATA[, LONG]
   LAT  <- DATA[, LAT]
@@ -704,7 +707,7 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL, WEIGHT=NULL, LAT, LONG,
 # /*               default value is NO, so the distance is computed using euclidian
 # /*               distance.
 # /********************************************************************************/
-  
+
 GWR <- function(DATA, YVAR, XVAR, XVARGLOBAL, XVARINF, WEIGHT=NULL, LAT, LONG,
                 GRID, DHV, METHOD, MODEL="NEGBIN",OFFSET=NULL,
                 DISTANCEKM="NO", H=NULL){
@@ -807,10 +810,24 @@ GWR <- function(DATA, YVAR, XVAR, XVARGLOBAL, XVARINF, WEIGHT=NULL, LAT, LONG,
     sealphag <- sqrt(1/abs(hess))/(parg^2)
   }
   
-# /*****************************************/ linha 586 SAS
+  # /*****************************************/ linha 586 SAS
   
   
 } #fecha GWR
 
+setwd('C:/Users/jehhv/OneDrive/Documentos/UnB/PIBIC/GWNBR')
+example2 <- example2 %>% 
+  mutate(Le = log(Loe))
 
+golden(example2,YVAR="Mort2564", XVAR=c('Professl','Elderly','OwnHome','Unemply'), 
+       LAT="Y", LONG="X",MODEL="NEGBIN",OFFSET="Le",METHOD="FIXED_G",BANDWIDTH="AIC",)
+       
+    
+# #golden(DATA=nakaya,YVAR=Mort2564,XVAR=c('Professl' 'Elderly' 'OwnHome' 'Unemply'),
+#   LONG=x,LAT=Y,OUTPUT=band,MODEL=POISSON,OFFSET=Le,METHOD=FIXED_G,
+#   BANDWIDTH=AIC)
 
+mgwnbr(DATA=logistic_std, YVAR="Degree",
+       XVAR=c("TotPop90", "PctRural", "PctEld", "PctFB", "PctPov"),
+       LAT="Y", LONG="X", GLOBALMIN="no", METHOD="FIXED_G",
+       BANDWIDTH="aic", MODEL="LOGISTIC")
