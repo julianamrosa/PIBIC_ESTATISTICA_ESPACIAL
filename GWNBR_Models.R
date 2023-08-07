@@ -7,10 +7,10 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
                    OFFSET=NULL,DISTANCEKM="NO"){
   # distancekm, model e offset = default
   E <- 10
-  y <<- as.numeric(unlist(DATA[,YVAR]))
-  x <<- DATA[,XVAR]
+  y <<- as.numeric(unlist(DATA[,YVAR])) #the name of the dependent or response variable
+  x <<- DATA[,XVAR] # the name of the independent or explicative variables. 
   N <<- length(y)
-  wt <<-rep(1, N)
+  wt <<- rep(1, N)
   if (!is.null(WEIGHT)){
     wt <<- as.matrix(WEIGHT)
   }
@@ -23,9 +23,9 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
   if (!is.null(XVARGLOBAL)){
     xa <<- as.matrix(XVARGLOBAL)
   }
-  yhat <<- matrix(0,N,1)
-  alphai <<- matrix(0, N, 1)
-  S <<- matrix(0,N,1)
+  yhat <<- matrix(0,N,1) #aqui nao poderia ser rep(0,N)? 
+  alphai <<- matrix(0, N, 1)  #aqui nao poderia ser rep(0,N)? 
+  S <<- matrix(0,N,1)  #aqui nao poderia ser rep(0,N)? 
   
   # global estimates #
   uj <- (y+mean(y))/2
@@ -69,7 +69,7 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
     cont2 <- 0
     while (abs(ddev)>0.000001 & cont2<100){
       uj <- ifelse(uj>E^100,E^100,uj)
-      Ai <- (uj/(1+alphag*uj))+(y-uj)*(alphag*uj/1+2*alphag*uj+alphag^2*uj*uj)
+      Ai <- (uj/(1+alphag*uj))+(y-uj)*(alphag*uj/(1+2*alphag*uj+alphag^2*uj*uj))
       Ai <- ifelse(Ai<=0,E^-5,Ai)
       Ai <- as.numeric(Ai)
       zj <- nj+(y-uj)/(Ai*(1+alphag*uj))-Offset
@@ -710,8 +710,8 @@ example2 <- read.csv("example2.csv")
 example2 <- example2 %>% 
   mutate(Le = log(Loe))
 
-golden(example2,YVAR="Mort2564", XVAR=c('Professl','Elderly','OwnHome','Unemply'), 
-       LAT="Y", LONG="X",MODEL="NEGBIN",OFFSET="Le",METHOD="FIXED_G",BANDWIDTH="AIC",GLOBALMIN = 'NO')
+system.time(golden(example2,YVAR="Mort2564", XVAR=c('Professl','Elderly','OwnHome','Unemply'), 
+       LAT="Y", LONG="X",MODEL="NEGBIN",OFFSET="Le",METHOD="FIXED_G",BANDWIDTH="AIC",GLOBALMIN = 'NO'))
 
 
 # #golden(DATA=nakaya,YVAR=Mort2564,XVAR=c('Professl' 'Elderly' 'OwnHome' 'Unemply'),
@@ -746,7 +746,7 @@ golden(example2,YVAR="Mort2564", XVAR=c('Professl','Elderly','OwnHome','Unemply'
 # /********************************************************************************/
 
 GWNBR <- function(DATA, YVAR, XVAR, XVARGLOBAL, XVARINF, WEIGHT=NULL, LAT, LONG,
-                GRID, DHV, METHOD, MODEL="NEGBIN",OFFSET=NULL,
+                GRID=NULL, DHV, METHOD, MODEL="NEGBIN",OFFSET=NULL,
                 DISTANCEKM="NO", H=NULL){
   E <- 10
   yy <- DATA[,YVAR]
@@ -852,12 +852,73 @@ GWNBR <- function(DATA, YVAR, XVAR, XVARGLOBAL, XVARINF, WEIGHT=NULL, LAT, LONG,
   else if (toupper(METHOD)=='FIXED_G'|toupper(METHOD)=='FIXED_BSQ'|toupper(METHOD)=='ADAPTIVE_BSQ'){
     hh <- h_
     print(c("Bandwidth: ",h))
-  } #parou na linha 596
+  } # linha 596 SAS
+  LONG <- DATA[, LONG]
+  LAT  <- DATA[, LAT]
+  COORD <<- matrix(c(LONG, LAT), ncol=2)
+  POINTS <- matrix(c(xx, yy), ncol=2, byrow=F) # no SAS, usa-se uma condicao
+  m <- nrow(POINTS)
+  bi <- matrix(0,nvar*m,4)
+  alphai<- matrix(0,m,3)
+  BB <- matrix(0,nvar*n,n)
+  rsqri <- matrix(0,m,1)
+  sumwi <- matrix(0,m,1)
+  varbi <- matrix(0,nvar*m,1)
+  S <- matrix(0,m,1)
+  S2 <- matrix(0,m,1)
+  biT <-matrix(0,m,nvar+1)
+  ym <- y - mean(y)
+  
+  # /******** calculating distance **********/ 
+  distance <<- dist(COORD,"euclidean")
+  sequ <<- 1:N
+  distance <- as.data.frame(distance)
+  for(i in 1:m){
+    for(j in 1:N){
+      seqi <<- matrix(i,n,1)
+      distan <<- cbind(seqi, sequ, as.matrix(distance)[,i])
+      if (toupper(DISTANCEKM)=="YES"){
+        distan[,3] <<- distan[,3]*111
+      }
+    }
+    u <<- nrow(distan)
+    w <<- matrix(0,u,1)
+    for(jj in 1:u){
+      if(toupper(METHOD=="FIXED_G")){
+        w[jj] <- exp(-0.5*(distan[jj,3]/h)^2)
+      }
+      else(toupper(METHOD=="FIXED_BSQ")){
+        w[jj] <- (1-(distan[jj,3]/h)^2)^2
+      }
+      if(is.null(grid)){#confirmar com Alan se é is.null mesmo
+        if(toupper(METHOD)=="ADAPTIVE_BSQ"){
+          distan <- distan[prder(distan[,3]),]
+          distan <- cbind(distan,1:nrow(distan))
+          w <- matrix(0,1)
+          hn <- distan[h,3]
+          for(jj in 1:n){
+            if(distan[jj,4] <= h){
+              w[jj,1] <- (1-(distan[jj,3]/hn)^2)^2 
+            }
+            else{
+              w[jj,1] <- 0
+            }
+          w <<- w[order(w[,2]),1]   
+          }
+        }
+      }
+    }
+  }
+} #fecha GWNBR
   
   
   # SUBSTITUICOES SAS -> R
   ## _h_ = h_
   ## h   = hh 
+  ## _dist_ = distance
+  ## seq = sequ
+  ## dist = distan
+  
   
   
   # %ELSE %DO;
@@ -872,7 +933,6 @@ GWNBR <- function(DATA, YVAR, XVAR, XVARGLOBAL, XVARINF, WEIGHT=NULL, LAT, LONG,
   # /*****************************************/ 
   
   
-} #fecha GWR
 
 setwd('C:/Users/jehhv/OneDrive/Documentos/UnB/PIBIC/GWNBR')
 library(readr)
@@ -884,8 +944,8 @@ example2 <- example2 %>%
   mutate(Le = log(Loe))
 View(example2)
 
-golden(example2,YVAR="Mort2564", XVAR=c('Professl','Elderly','OwnHome','Unemply'), 
-       LAT="Y", LONG="X",MODEL="NEGBIN",OFFSET="Le",METHOD="FIXED_G",BANDWIDTH="AIC",GLOBALMIN='NO')
+system.time(golden(example2,YVAR="Mort2564", XVAR=c('Professl','Elderly','OwnHome','Unemply'), 
+       LAT="Y", LONG="X",MODEL="NEGBIN",OFFSET="Le",METHOD="FIXED_G",BANDWIDTH="AIC",GLOBALMIN='NO'))
 
 
 # #golden(DATA=nakaya,YVAR=Mort2564,XVAR=c('Professl' 'Elderly' 'OwnHome' 'Unemply'),
