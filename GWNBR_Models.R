@@ -1036,12 +1036,55 @@ GWNBR <- function(DATA, YVAR, XVAR, XVARGLOBAL, XVARINF, WEIGHT=NULL, LAT, LONG,
       w_ <- w_[order(w_[,1]),]
       sumwi[i] <- sum(w_[1:int(nrow(w_)*1),1])
     }
-    if (i == 1) { #revisar !! 
+    if (i == 1) { 
       W_f <- cbind(matrix(i, n, 1), W, t(1:nrow(w)))
     } else {
-      W_f <- rbind(W_f, cbind(matrix(i, n, 1), W, 1:nrow(w)))
+      W_f <- rbind(W_f, cbind(matrix(i, n, 1), W, t(1:nrow(w))))
     }
   } #fecha laco da linha 876
+  w_f <- W_f
+  W_f <- rbind(W_f, w_f)
+  if (!is.null(XVARGLOBAL)) {
+    uj <- (y + mean(y)) / 2
+    nj <- log(uj)
+    if (toupper(MODEL) == "POISSON") {
+      alphag <- E^(-6)
+    }
+    devga <- 0
+    ddev <- 1
+    cont2 <- 0
+    while (abs(ddev) > 0.000001 & cont2 < 100) {
+      uj <- ifelse(uj > E^100, E^100, uj)
+      Aa <- (uj / (1 + alphag * uj)) + (y - uj) * (alphag * uj / (1 + 2 * alphag * uj + alphag^2 * uj^2)) #revisar
+      Aa <- ifelse(Aa <= 0, E^(-5), Aa)
+      za <- nj+(y - uj)/ (Aa*(1 + alphag*uj)) - Offset
+      if (det(t(xa) %*% (Aa * xa)) == 0) {
+        ba <- matrix(0, nrow = nvar, ncol = 1)
+      } else {
+        ba <- solve(t(xa) %*% (Aa * xa)) %*% t(xa) %*% (Aa * za)
+      }
+      nj <- xa %*% ba + Offset
+      nj <- ifelse(nj > E^2, E^2, nj)
+      uj <- exp(nj)
+      olddev <- devga
+      uj <- ifelse(uj < E^(-150), E^(-150), uj)
+      tt <- y / uj
+      tt <- ifelse(tt == 0, E^(-10), tt)
+      if (toupper(MODEL) == "POISSON") {
+        devga <- 2 * sum(y * log(tt) - (y - uj))
+      }
+      if (toupper(MODEL) == "NEGBIN") {
+        devga <- 2 * sum(y * log(tt) - (y + 1 / alphag) * log((1 + alphag * y) / (1 + alphag * uj)))
+      }
+      ddev <- devga - olddev
+      cont2 <- cont2 + 1
+    }
+    diffba <-1
+    contb <- 1
+  
+    
+  }
+  
 } #fecha GWNBR
   
   
