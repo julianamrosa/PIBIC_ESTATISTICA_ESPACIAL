@@ -8,7 +8,7 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
   # distancekm, model e offset = default
   E <- 10
   y <<- DATA[,YVAR] #the name of the dependent or response variable
-  x <<- DATA[XVAR] # the name of the independent or explicative variables. 
+  x <<- DATA[XVAR] # the name of the independent or explicative variables.
   N <<- length(y)
   wt <<- rep(1, N)
   if (!is.null(WEIGHT)){
@@ -20,7 +20,7 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
     Offset <<- DATA[,OFFSET]
     Offset <<- as.matrix(Offset)
   }
-  x <- as.matrix(cbind(rep(1,N),x))
+  x <<- as.matrix(cbind(rep(1,N),x))
   nvar <<- ncol(x)
   if (!is.null(XVARGLOBAL)){
     xa <<- DATA[,XVARGLOBAL]
@@ -70,11 +70,11 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
     cont2 <- 0
     while (abs(ddev)>0.000001 & cont2<100){
       uj <- ifelse(uj>E^100,E^100,uj)
-      Ai <<- as.numeric((uj/(1+alphag*uj))+(y-uj)*(alphag*uj/(1+2*alphag*uj+alphag^2*uj*uj)))
-      Ai <<- ifelse(Ai<=0,E^(-5),Ai)
+      Ai <- as.numeric((uj/(1+alphag*uj))+(y-uj)*(alphag*uj/(1+2*alphag*uj+alphag^2*uj*uj)))
+      Ai <- ifelse(Ai<=0,E^(-5),Ai)
       # Ai <- as.numeric(Ai)
       zj <- nj+(y-uj)/(Ai*(1+alphag*uj))-Offset
-      if (det(t(x)%*%(Ai*x))==0){ #fonte do erro
+      if (det(t(x)%*%(Ai*x))==0){ 
         bg <- rep(0,nvar)
       }
       else{
@@ -104,7 +104,7 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
     ujg <<- uj
     cont <- cont+1
     ddpar <- parg-parold
-  } #fecha while
+  } #fecha while linha 39
   LONG <- DATA[, LONG]
   LAT  <- DATA[, LAT]
   COORD <<- matrix(c(LONG, LAT), ncol=2)
@@ -135,8 +135,8 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
         w[position] <- 0
       }
       else if(toupper(METHOD)=="ADAPTIVE_BSQ"){
-        distan <<- distan[order(distan[,3]),] 
-        distan <<- cbind(distan,1:nrow(distan)) #se necessario, usar t(1:nrow(distan))
+        distan <- distan[order(distan[,3]),] 
+        distan <- cbind(distan,1:nrow(distan)) #se necessario, usar t(1:nrow(distan))
         w <- matrix(0,N,2)
         hn <- distan[h,3]
         for(jj in 1:N){
@@ -154,7 +154,6 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
         w <- w[order(w[,2]),]
         w <- w[,1]
       } #fecha else if
-      #falta um tecão de CÓDIGO!!!!
       uj <- ujg
       nj <- log(uj)
       par <- parg
@@ -189,6 +188,7 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
             }
           }
           alpha <- 1 / par
+          alpha <- as.numeric(alpha)
         }
         dev <- 0
         ddev <- 1
@@ -198,11 +198,15 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
           Ai <- (uj/(1 + alpha * uj)) + (y-uj) * (alpha * uj / (1 + 2 * alpha * uj + alpha^2 *uj*uj))
           Ai <- ifelse(Ai <= 0, E^(-5), Ai)
           zj <- nj + (y - uj) / (Ai * (1 + alpha * uj)) - Offset
+          print(class(w))
+          print(class(Ai))
+          print(class(x))
+          print(class(wt))
           if (det(t(x) %*% (w * Ai * x * wt)) == 0) {
             b <- matrix(0, nvar, 1)
           } 
           else {
-            b <- solve(t(x)%*%as.matrix((w*Ai*x*wt))) %*% t(x) %*% (w * Ai * wt * zj)
+            b <- solve(t(x)%*%(w*Ai*x*wt)) %*% t(x) %*% (w * Ai * wt * zj)
           }
           nj <- x %*% b + Offset
           nj <- ifelse(nj > E^2, E^2, nj)
@@ -211,7 +215,6 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
           uj <- ifelse(uj < E^(-150), E^(-150), uj)
           tt <- y / uj
           tt <- ifelse(tt == 0, E^(-10), tt)
-          print(parg)
           if (toupper(MODEL) == "POISSON") {
             dev <- 2 * sum(y * log(tt) - (y - uj))
           }
@@ -231,7 +234,7 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
       }
       if(toupper(METHOD)=="FIXED_G"|toupper(METHOD)=="FIXED_BSQ"|toupper(METHOD)=="ADAPTIVE_BSQ"){
         yhat[i] <<- uj[i]
-        if(det(t(x)%*%(w*Ai*x*wt)==0)){
+        if(det(t(x)%*%as.matrix((w*Ai*x*wt)))==0){
           S[i] <<- 0
         }
         else{
@@ -250,7 +253,7 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
           uj <- (y+mean(y))/2
           nj <- log(uj)
           if(toupper(MODEL)=="POISSON"){
-            alphag <- E^(-6)
+            alphag <<- E^(-6)
           }
           dev <- 0
           ddev <- 1
@@ -350,7 +353,7 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
               C <- solve(t(x) %*% (w * Ai * x * wt)) %*% t(x) %*% (w * Ai * wt)
               R_matrix <- rbind(R_matrix, (x[i,] %*% C))
               Z_matrix <- cbind(Z_matrix, (zj + Offset + xa %*% ba))
-              yhat[i] <- uj
+              yhat[i] <<- uj
             }
             hat_matrix <- R_matrix %*% Z_matrix / diag(Z_matrix)
             uj <- yhat
@@ -365,7 +368,7 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
             diffba <- sum(oldba - ba)
             contb <- contb + 1
           }
-          S <- diag((I(n) - hat_matrix) %*% xa %*% solve((xa %*% Aa) %*% t(xa) %*% (I(n) - hat_matrix) %*% xa %*% wt) %*% (xa %*% Aa %*% wt) %*% (I(n) - hat_matrix) + hat_matrix)
+          S <<- diag((I(n) - hat_matrix) %*% xa %*% solve((xa %*% Aa) %*% t(xa) %*% (I(n) - hat_matrix) %*% xa %*% wt) %*% (xa %*% Aa %*% wt) %*% (I(n) - hat_matrix) + hat_matrix)
         }
         CV <- sum((y - yhat) %*% wt %*% (y - yhat))
         if (toupper(MODEL) == "POISSON") {
@@ -384,7 +387,7 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
         }
       }
       else { #se for method == ADAPTIVEN
-        yhat[1] <- x[i,] %*% b
+        yhat[1] <<- x[i,] %*% b
         CV <- sum((y[i] - yhat) %*% wt %*% (y[i] - yhat))
       }
       uj <- ifelse(uj == 0, E^(-10), uj)
@@ -414,8 +417,8 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
     ax <- 5
     bx <- N
   }
-  r <<- 0.61803399
-  tol <<- 0.1
+  r <- 0.61803399
+  tol <- 0.1
   if(toupper(GLOBALMIN)=="NO"){
     lower <- ax
     upper <- bx
@@ -447,10 +450,10 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
   CV2 <- res2[1]
   
   if(toupper(METHOD)=="FIXED_G"|toupper(METHOD)=="FIXED_BSQ"|toupper(METHOD)=="ADAPTIVE_BSQ"){
-    var_ <<- data.frame() #linha 403 do SAS
+    var_ <- data.frame() #linha 403 do SAS
     if(GMY==1){
-      var_ <<- c(GMY,h1,CV1,h2,CV2) #revisar aqui
-      names(var_) <<- c('GMY','h1','CV1','h2','CV2')
+      var_ <- c(GMY,h1,CV1,h2,CV2) #revisar aqui
+      names(var_) <- c('GMY','h1','CV1','h2','CV2')
       View(var_)
     }
   }  
@@ -508,7 +511,7 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
     print(c(xming, "Da Silva and Mendes, 2018"))
   }
   if (toupper(METHOD)=="FIXEG_G"|toupper(METHOD)=="FIXED_BSQ"|toupper(METHOD)=="ADAPTIVE_BSQ"){
-    h_<<- min(min_bandwidth[,2]) #proc sql
+    h_<- min(min_bandwidth[,2]) #proc sql
   }
 } #fecha golden
 
@@ -522,7 +525,7 @@ example2 <- example2 %>%
 system.time(golden(example2,YVAR="Mort2564", XVAR=c('Professl','Elderly','OwnHome','Unemply'), 
                    LAT="Y", LONG="X",MODEL="NEGBIN",OFFSET="Le",METHOD="FIXED_G",BANDWIDTH="AIC",GLOBALMIN = 'NO'))
 
-
+traceback()
 # #golden(DATA=nakaya,YVAR=Mort2564,XVAR=c('Professl' 'Elderly' 'OwnHome' 'Unemply'),
 #   LONG=x,LAT=Y,OUTPUT=band,MODEL=POISSON,OFFSET=Le,METHOD=FIXED_G,
 #   BANDWIDTH=AIC)
@@ -619,8 +622,8 @@ GWNBR <- function(DATA, YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
     cont2 <- 0  
     while(abs(ddev)>0.000001|cont2<100){
       uj <- ifelse(uj>E^100,E^100,uj)
-      Ai <- (uj/(1+alphag*uj))+(y-uj)*(alphag*uj/1+2*alphag*uj+alphag^2*uj*uj)
-      Ai <- ifelse(Ai<=0,E^-5,Ai)
+      Ai <<- (uj/(1+alphag*uj))+(y-uj)*(alphag*uj/1+2*alphag*uj+alphag^2*uj*uj)
+      Ai <<- ifelse(Ai<=0,E^-5,Ai)
       zj <- nj+(y-uj)/(Ai*(1+alphag*uj))-Offset
       if (det(t(x)%*%(Ai*x))==0){
         bg <- rep(0,Nvar)
@@ -762,9 +765,9 @@ GWNBR <- function(DATA, YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
       ddev <- 1
       cont2 <- 0
       while (abs(ddev) > 0.000001 & cont2 < 100) {
-        uj <- choose(uj > 1E100, 1E100, uj)
-        Ai <- (uj / (1 + alpha * uj)) + (y - uj) * (alpha * uj / (1 + 2 * alpha * uj + alpha^2 * uj * uj))
-        Ai <- choose(Ai <= 0, 1E-5, Ai)
+        uj <- choose(uj > E^100, E^100, uj)
+        Ai <<- (uj / (1 + alpha * uj)) + (y - uj) * (alpha * uj / (1 + 2 * alpha * uj + alpha^2 * uj * uj))
+        Ai <<- choose(Ai <= 0, 1E-5, Ai)
         zj <- nj + (y - uj) / (Ai * (1 + alpha * uj)) - offset
         
         if (det(t(x) %*% (w * Ai * x * wt)) == 0) {
@@ -910,8 +913,8 @@ GWNBR <- function(DATA, YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
           cont2 <- 0
           while (abs(ddev) > 0.000001 & cont2 < 100) {
             uj <- ifelse(uj > E^100, E^100, uj)
-            Ai <- (uj / (1 + alpha * uj)) + (y - uj) * (alpha * uj / (1 + 2 * alpha * uj + alpha^2 * uj^2))
-            Ai <- ifelse(Ai <= 0, E^(-5), Ai)
+            Ai <<- (uj / (1 + alpha * uj)) + (y - uj) * (alpha * uj / (1 + 2 * alpha * uj + alpha^2 * uj^2))
+            Ai <<- ifelse(Ai <= 0, E^(-5), Ai)
             zj <- nj + (y - uj) / (Ai * (1 + alpha * uj)) - offset - xa %*% ba
             if (det(t(x) %*% (w * Ai %*% x %*% wt)) == 0) {
               b <- matrix(0, nrow = nvar, ncol = 1)
