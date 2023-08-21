@@ -70,8 +70,8 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
     cont2 <- 0
     while (abs(ddev)>0.000001 & cont2<100){
       uj <- ifelse(uj>E^100,E^100,uj)
-      Ai <- as.numeric((uj/(1+alphag*uj))+(y-uj)*(alphag*uj/(1+2*alphag*uj+alphag^2*uj*uj)))
-      Ai <- ifelse(Ai<=0,E^(-5),Ai)
+      Ai <<- as.numeric((uj/(1+alphag*uj))+(y-uj)*(alphag*uj/(1+2*alphag*uj+alphag^2*uj*uj)))
+      Ai <<- ifelse(Ai<=0,E^(-5),Ai)
       # Ai <- as.numeric(Ai)
       zj <- nj+(y-uj)/(Ai*(1+alphag*uj))-Offset
       if (det(t(x)%*%(Ai*x))==0){ 
@@ -98,13 +98,16 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
       }
       else{
         ddev <- devg-olddev
-        cont2 <- cont2+1
       }
+      cont2 <- cont2+1
     }
     ujg <<- uj
     cont <- cont+1
     ddpar <- parg-parold
   } #fecha while linha 39
+  
+###################################
+  
   LONG <- DATA[, LONG]
   LAT  <- DATA[, LAT]
   COORD <<- matrix(c(LONG, LAT), ncol=2)
@@ -195,13 +198,9 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
         cont2 <- 1
         while (abs(ddev) > 0.000001 & cont2 < 100) {
           uj <- ifelse(uj > E^100, E^100, uj)
-          Ai <- (uj/(1 + alpha * uj)) + (y-uj) * (alpha * uj / (1 + 2 * alpha * uj + alpha^2 *uj*uj))
-          Ai <- ifelse(Ai <= 0, E^(-5), Ai)
+          Ai <<- as.numeric((uj/(1 + alpha * uj)) + (y-uj) * (alpha * uj / (1 + 2 * alpha * uj + alpha^2 *uj*uj)))
+          Ai <<- ifelse(Ai <= 0, E^(-5), Ai)
           zj <- nj + (y - uj) / (Ai * (1 + alpha * uj)) - Offset
-          print(class(w))
-          print(class(Ai))
-          print(class(x))
-          print(class(wt))
           if (det(t(x) %*% (w * Ai * x * wt)) == 0) {
             b <- matrix(0, nvar, 1)
           } 
@@ -232,6 +231,10 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
         cont <- cont + 1
         ddpar <- par - parold
       }
+      print(w)
+      print(Ai)
+      print(x)
+      print(wt)
       if(toupper(METHOD)=="FIXED_G"|toupper(METHOD)=="FIXED_BSQ"|toupper(METHOD)=="ADAPTIVE_BSQ"){
         yhat[i] <<- uj[i]
         if(det(t(x)%*%as.matrix((w*Ai*x*wt)))==0){
