@@ -106,7 +106,7 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
     ddpar <- parg-parold
   } #fecha while linha 39
   
-###################################
+  ###################################
   
   LONG <- DATA[, LONG]
   LAT  <- DATA[, LAT]
@@ -176,8 +176,6 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
               par <- 1/alphai[i - 1]
             }
           }
-          print(alphai)
-          print(par)
           while (abs(dpar) > 0.000001 & cont1 < 200) {
             par <- ifelse(par < E^(-10), E^(-10), par)
             g <- sum(w * wt * (digamma(par + y) - digamma(par) + log(par) + 1 - log(par + uj) - (par + y) / (par + uj)))
@@ -233,8 +231,10 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
         cont <- cont + 1
         ddpar <- par - parold
       }
-      if(toupper(METHOD)=="FIXED_G"|toupper(METHOD)=="FIXED_BSQ"|toupper(METHOD)=="ADAPTIVE_BSQ"){
+      print(alpha)
+       if(toupper(METHOD)=="FIXED_G"|toupper(METHOD)=="FIXED_BSQ"|toupper(METHOD)=="ADAPTIVE_BSQ"){
         yhat[i] <<- uj[i]
+        alphai[i] <<- alpha 
         if(det(t(x)%*%as.matrix((w*Ai*x*wt)))==0){
           S[i] <<- 0
         }
@@ -1249,7 +1249,7 @@ GWNBR <- function(DATA, YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
 # /*****************************************/ 
 
 
-setwd('C:/Users/jehhv/OneDrive/Documentos/UnB/PIBIC/GWNBR')
+setwd('D:/Users/jessica.abreu/Documents/UnB')
 library(readr)
 GeorgiaData <- read_delim("GeorgiaData.csv", 
                           delim = ";", escape_double = FALSE, trim_ws = TRUE)
@@ -1267,5 +1267,4 @@ GWNBR(example2,YVAR="Mort2564",XVAR=c('Professl','Elderly','OwnHome','Unemply'),
 
 
 
-  
-  
+
