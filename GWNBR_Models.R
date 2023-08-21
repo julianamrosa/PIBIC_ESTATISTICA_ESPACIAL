@@ -106,7 +106,7 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
     ddpar <- parg-parold
   } #fecha while linha 39
   
-  ###################################
+###################################
   
   LONG <- DATA[, LONG]
   LAT  <- DATA[, LAT]
@@ -231,10 +231,9 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
         cont <- cont + 1
         ddpar <- par - parold
       }
-      print(alpha)
-       if(toupper(METHOD)=="FIXED_G"|toupper(METHOD)=="FIXED_BSQ"|toupper(METHOD)=="ADAPTIVE_BSQ"){
+      if(toupper(METHOD)=="FIXED_G"|toupper(METHOD)=="FIXED_BSQ"|toupper(METHOD)=="ADAPTIVE_BSQ"){
         yhat[i] <<- uj[i]
-        alphai[i] <<- alpha 
+        alphai[i] <<- alpha
         if(det(t(x)%*%as.matrix((w*Ai*x*wt)))==0){
           S[i] <<- 0
         }
@@ -249,159 +248,157 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
             W_f <- rbind(W_f,c(cbind(matrix(i,N,1),w,t(seq(1,nrow(w)))))) 
           }
         }
-        if(!is.null(XVARGLOBAL)){
-          uj <- (y+mean(y))/2
-          nj <- log(uj)
-          if(toupper(MODEL)=="POISSON"){
-            alphag <<- E^(-6)
+      }
+    }
+    if(toupper(METHOD)=="FIXED_G"|toupper(METHOD)=="FIXED_BSQ"|toupper(METHOD)=="ADAPTIVE_BSQ"){
+      if(!is.null(XVARGLOBAL)){
+        uj <- (y+mean(y))/2
+        nj <- log(uj)
+        if(toupper(MODEL)=="POISSON"){
+          alphag <<- E^(-6)
+        }
+        dev <- 0
+        ddev <- 1
+        cont2 <- 0
+        while(abs(ddev)>0.000001 & cont2 < 100){
+          uj <- ifelse(uj > E^100, E^100,uj)
+          Aa <- (uj/(1+alphag*uj)) + (y-uj) * (alphag*uj/(1+2*alphag*uj+alphag^2*uj*uj))
+          Aa <- ifelse(Aa <= 0, E^(-5), Aa)
+          za <- nj+(y-uj)/(Aa*(1+alphag*uj)) - Offset
+          if(det(t(xa)%*%(Aa*xa))==0){
+            ba <- matrix(0,nvar,1)
+          } else{
+            ba <- solve(t(xa)%*%(Aa*xa))%*%t(xa)%*%(Aa*za)
           }
-          dev <- 0
-          ddev <- 1
-          cont2 <- 0
-          while(abs(ddev)>0.000001 & cont2 < 100){
-            uj <- ifelse(uj > E^100, E^100,uj)
-            Aa <- (uj/(1+alphag*uj)) + (y-uj) * (alphag*uj/(1+2*alphag*uj+alphag^2*uj*uj))
-            Aa <- ifelse(Aa <= 0, E^(-5), Aa)
-            za <- nj+(y-uj)/(Aa*(1+alphag*uj)) - Offset
-            if(det(t(xa)%*%(Aa*xa))==0){
-              ba <- matrix(0,nvar,1)
-            } else{
-              ba <- solve(t(xa)%*%(Aa*xa))%*%t(xa)%*%(Aa*za)
-            }
-            nj <-xa %*% ba + Offset
-            nj <- ifelse(nj > E^2, E^2, nj)
-            uj <- exp(nj)
-            olddev <- devga
-            uj <- ifelse(uj < E^(-150), E^(-150), uj)
-            tt <- y/uj
-            tt <- ifelse(tt == 0, E^(-10),tt)
+          nj <-xa %*% ba + Offset
+          nj <- ifelse(nj > E^2, E^2, nj)
+          uj <- exp(nj)
+          olddev <- devga
+          uj <- ifelse(uj < E^(-150), E^(-150), uj)
+          tt <- y/uj
+          tt <- ifelse(tt == 0, E^(-10),tt)
+          if(toupper(MODEL)=="POISSON"){
+            devga <- 2*sum(y*log(tt)-(y-uj)) 
+          }
+          if(toupper(MODEL)=="NEGBIN"){
+            devga <- 2*sum(y*log(tt)-(y+1/alphag)*log((1+alphag*y)/(1+alphag*uj)))
+          }
+          ddev <- devga - olddev
+          cont2 <- cont2 + 1
+        }
+        diffba <- 1
+        contb <- 1
+        while(abs(diffba) > 0.00001 & contb < 50){
+          oldba <- ba
+          hat_matrix <- matrix(0,N,N) 
+          for(i in 1:N){
+            m1 <- (i-1)*n+1
+            m2 <- m1 + (n-1)
+            w <- w_f[m1:m2,2]
             if(toupper(MODEL)=="POISSON"){
-              devga <- 2*sum(y*log(tt)-(y-uj)) 
+              alpha <- E^(-6)
             }
             if(toupper(MODEL)=="NEGBIN"){
-              devga <- 2*sum(y*log(tt)-(y+1/alphag)*log((1+alphag*y)/(1+alphag*uj)))
+              par <- 1/alphai[i]
+              if(par <= E^(-5)){
+                if(i>1){
+                  par <- 1/alphai[i-1]
+                }
+              }
+              while(abs(dpar)> 0.000001 & cont1 < 200){
+                par <- ifelse(par < E^(-10),E^(-10),par)
+                g <- sum(w*wt*(digamma(par+y)-digamma(par)+log(par)+1-log(par+uj)-(par+y)/(par+uj)))
+                hess <- sum(w * wt * (trigamma(par + y) - trigamma(par) + 1 / par - 2 / (par + uj) + (y + par) / (par + uj)^2))
+                hess <- ifelse(hess == 0, E^(-23), hess)
+                par0 <- par
+                par <- par0 - solve(hess) %*% g
+                dpar <- par - par0
+                cont1 <- cont1 + 1
+                if(par > E^6){
+                  par <- E^6
+                  dpar <- 0
+                }
+              }
+              alpha <- 1/par
             }
-            ddev <- devga - olddev
-            cont2 <- cont2 + 1
-          }
-          diffba <- 1
-          contb <- 1
-          while(abs(diffba) > 0.00001 & contb < 50){
-            oldba <- ba
-            hat_matrix <- matrix(0,N,N) 
-            for(i in 1:N){
-              m1 <- (i-1)*n+1
-              m2 <- m1 + (n-1)
-              w <- w_f[m1:m2,2]
-              if(toupper(MODEL)=="POISSON"){
-                alpha <- E^(-6)
+            dev <- 0
+            ddev <- 1
+            cont2 <- 0
+            while (abs(ddev) > 0.000001 & cont2 < 100) {
+              uj <- ifelse(uj > E^100, E^100, uj)
+              Ai <- (uj / (1 + alpha * uj)) + (y - uj) * (alpha * uj / (1 + 2 * alpha * uj + alpha^2 * uj*uj))
+              Ai <- ifelse(Ai <= 0, E^(-5), Ai)
+              zj <- nj + (y - uj) / (Ai * (1 + alpha * uj)) - Offset - xa %*% ba
+              if (det(t(x) %*% (w * Ai * x * wt)) == 0) {
+                b <- matrix(0, nvar, 1)
+              } else {
+                b <- solve(t(x) %*% (w * Ai * x * wt)) %*% t(x) %*% (w * Ai * wt) %*% zj
               }
-              if(toupper(MODEL)=="NEGBIN"){
-                par <- 1/alphai[i]
-                if(par <= E^(-5)){
-                  if(i>1){
-                    par <- 1/alphai[i-1]
-                  }
-                }
-                while(abs(dpar)> 0.000001 & cont1 < 200){
-                  par <- ifelse(par < E^(-10),E^(-10),par)
-                  g <- sum(w*wt*(digamma(par+y)-digamma(par)+log(par)+1-log(par+uj)-(par+y)/(par+uj)))
-                  hess <- sum(w * wt * (trigamma(par + y) - trigamma(par) + 1 / par - 2 / (par + uj) + (y + par) / (par + uj)^2))
-                  hess <- ifelse(hess == 0, E^(-23), hess)
-                  par0 <- par
-                  par <- par0 - solve(hess) %*% g
-                  dpar <- par - par0
-                  cont1 <- cont1 + 1
-                  if(par > E^6){
-                    par <- E^6
-                    dpar <- 0
-                  }
-                }
-                alpha <- 1/par
-              }
-              dev <- 0
-              ddev <- 1
-              cont2 <- 0
-              while (abs(ddev) > 0.000001 & cont2 < 100) {
-                uj <- ifelse(uj > E^100, E^100, uj)
-                Ai <- (uj / (1 + alpha * uj)) + (y - uj) * (alpha * uj / (1 + 2 * alpha * uj + alpha^2 * uj*uj))
-                Ai <- ifelse(Ai <= 0, E^(-5), Ai)
-                zj <- nj + (y - uj) / (Ai * (1 + alpha * uj)) - Offset - xa %*% ba
-                if (det(t(x) %*% (w * Ai * x * wt)) == 0) {
-                  b <- matrix(0, nvar, 1)
-                } else {
-                  b <- solve(t(x) %*% (w * Ai * x * wt)) %*% t(x) %*% (w * Ai * wt) %*% zj
-                }
-                nj <- x %*% b + Offset + xa %*% ba
-                nj <- ifelse(nj > E^2, E^2, nj)
-                uj <- exp(nj)
-                olddev <- dev
-                uj <- ifelse(uj < E^(-150), E^(-150), uj)
-                tt <- y / uj
-                tt <- ifelse(tt == 0, E^(-10), tt)
+              nj <- x %*% b + Offset + xa %*% ba
+              nj <- ifelse(nj > E^2, E^2, nj)
+              uj <- exp(nj)
+              olddev <- dev
+              uj <- ifelse(uj < E^(-150), E^(-150), uj)
+              tt <- y / uj
+              tt <- ifelse(tt == 0, E^(-10), tt)
                 
-                if (toupper(MODEL) == "POISSON") {
-                  dev <- 2 * sum(y * log(tt) - (y - uj))
-                }
-                if (toupper(MODEL) == "NEGBIN") {
-                  dev <- 2 * sum(y * log(tt) - (y + 1 / alpha) * log((1 + alpha * y) / (1 + alpha * uj)))
-                }
-                
-                ddev <- dev - olddev
-                cont2 <- cont2 + 1
+              if (toupper(MODEL) == "POISSON") {
+                dev <- 2 * sum(y * log(tt) - (y - uj))
               }
-              C <- solve(t(x) %*% (w * Ai * x * wt)) %*% t(x) %*% (w * Ai * wt)
-              R_matrix <- rbind(R_matrix, (x[i,] %*% C))
-              Z_matrix <- cbind(Z_matrix, (zj + Offset + xa %*% ba))
-              yhat[i] <<- uj
+              if (toupper(MODEL) == "NEGBIN") {
+                dev <- 2 * sum(y * log(tt) - (y + 1 / alpha) * log((1 + alpha * y) / (1 + alpha * uj)))
+              }
+                
+              ddev <- dev - olddev
+              cont2 <- cont2 + 1
             }
-            hat_matrix <- R_matrix %*% Z_matrix / diag(Z_matrix)
-            uj <- yhat
-            nj <- log(uj)
-            Aa <- (uj / (1 + alphag * uj)) + (y - uj) * (alphag * uj / (1 + 2 * alphag * uj + alphag^2 * uj*uj))
-            Aa <- ifelse(Aa <= 0, E^(-5), Aa)
-            za <- nj + (y - uj) / (Aa * (1 + alphag * uj)) - Offset
-            ba <- solve((xa %*% Aa) %*% t(xa) %*% (I(n) - hat_matrix) %*% (xa %*% Aa %*% wt) %*% (I(n) - hat_matrix) + hat_matrix) %*% ((xa %*% Aa) %*% t(xa) %*% (I(n) - hat_matrix) %*% (za %*% wt))
-            nj <- xa %*% ba + Offset
-            nj <- ifelse(nj > E^2, E^2, nj)
-            uj <- exp(nj)
-            diffba <- sum(oldba - ba)
-            contb <- contb + 1
+            C <- solve(t(x) %*% (w * Ai * x * wt)) %*% t(x) %*% (w * Ai * wt)
+            R_matrix <- rbind(R_matrix, (x[i,] %*% C))
+            Z_matrix <- cbind(Z_matrix, (zj + Offset + xa %*% ba))
+            yhat[i] <<- uj
           }
-          S <<- diag((I(n) - hat_matrix) %*% xa %*% solve((xa %*% Aa) %*% t(xa) %*% (I(n) - hat_matrix) %*% xa %*% wt) %*% (xa %*% Aa %*% wt) %*% (I(n) - hat_matrix) + hat_matrix)
+          hat_matrix <- R_matrix %*% Z_matrix / diag(Z_matrix)
+          uj <- yhat
+          nj <- log(uj)
+          Aa <- (uj / (1 + alphag * uj)) + (y - uj) * (alphag * uj / (1 + 2 * alphag * uj + alphag^2 * uj*uj))
+          Aa <- ifelse(Aa <= 0, E^(-5), Aa)
+          za <- nj + (y - uj) / (Aa * (1 + alphag * uj)) - Offset
+          ba <- solve((xa %*% Aa) %*% t(xa) %*% (I(n) - hat_matrix) %*% (xa %*% Aa %*% wt) %*% (I(n) - hat_matrix) + hat_matrix) %*% ((xa %*% Aa) %*% t(xa) %*% (I(n) - hat_matrix) %*% (za %*% wt))
+          nj <- xa %*% ba + Offset
+          nj <- ifelse(nj > E^2, E^2, nj)
+          uj <- exp(nj)
+          diffba <- sum(oldba - ba)
+          contb <- contb + 1
         }
-        CV <- sum((y - yhat) %*% wt %*% (y - yhat)) #pode ser que tenha que transpor. Ver linha 328 do SAS
-        if (toupper(MODEL) == "POISSON") {
-          ll <- sum(-yhat + y * log(yhat) - lgamma(y + 1))
-          npar <- sum(S)
-        }
-        if (toupper(MODEL) == "NEGBIN") {
-          ll <- sum(y * log(alphai * yhat) - (y + 1 / alphai) * log(1 + alphai * yhat) + lgamma(y + 1 / alphai) - lgamma(1 / alphai) - lgamma(y + 1))
-          npar <- sum(S) + sum(S) / nvar
-        }
-        AIC <- 2 * npar - 2 * ll
-        AICC <- AIC + (2 * npar * (npar + 1)) / (N - npar - 1)
-        if (toupper(BANDWIDTH) == "AIC") { 
-          CV <- AICC 
-        }
+        S <<- diag((I(n) - hat_matrix) %*% xa %*% solve((xa %*% Aa) %*% t(xa) %*% (I(n) - hat_matrix) %*% xa %*% wt) %*% (xa %*% Aa %*% wt) %*% (I(n) - hat_matrix) + hat_matrix)
       }
-      else { #se for method == ADAPTIVEN
-        yhat[1] <<- x[i,] %*% b
-        CV <- sum((y[i] - yhat) %*% wt %*% (y[i] - yhat))
+      CV <- sum((y - yhat) %*% wt %*% (y - yhat)) #pode ser que tenha que transpor. Ver linha 328 do SAS
+      if (toupper(MODEL) == "POISSON") {
+        ll <- sum(-yhat + y * log(yhat) - lgamma(y + 1))
+        npar <- sum(S)
       }
-      uj <- ifelse(uj == 0, E^(-10), uj)
-      uj <- ifelse(uj == 1, 0.99999, uj)
-      CV <- sum((y - yhat) %*% wt %*% (y - yhat)) #pode ser que tenha que transpor. Ver linha 349 do SAS
-      ll <- sum(y * log(uj) - (1 - y) * log(1 - uj))
-      npar <- sum(S)
+      if (toupper(MODEL) == "NEGBIN") {
+        ll <- sum(y * log(alphai * yhat) - (y + 1 / alphai) * log(1 + alphai * yhat) + lgamma(y + 1 / alphai) - lgamma(1 / alphai) - lgamma(y + 1))
+        npar <- sum(S) + sum(S) / nvar
+      }
       AIC <- 2 * npar - 2 * ll
       AICC <- AIC + (2 * npar * (npar + 1)) / (N - npar - 1)
       if (toupper(BANDWIDTH) == "AIC") { 
         CV <- AICC 
       }
-      res <- cbind(CV, npar)
-      return(res)
-    } # linha 114!
+    }
+    uj <- ifelse(uj == 0, E^(-10), uj)
+    uj <- ifelse(uj == 1, 0.99999, uj)
+    CV <- sum((y - yhat) %*% wt %*% (y - yhat)) #pode ser que tenha que transpor. Ver linha 349 do SAS
+    ll <- sum(y * log(uj) - (1 - y) * log(1 - uj))
+    npar <- sum(S)
+    AIC <- 2 * npar - 2 * ll
+    AICC <- AIC + (2 * npar * (npar + 1)) / (N - npar - 1)
+    if (toupper(BANDWIDTH) == "AIC") { 
+      CV <- AICC 
+    }
+    res <- cbind(CV, npar)
+    return(res)
   } #fecha CV!!!!
   # DEFINING GOLDEN SECTION SEARCH PARAMETERS #
   
@@ -1249,7 +1246,7 @@ GWNBR <- function(DATA, YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
 # /*****************************************/ 
 
 
-setwd('D:/Users/jessica.abreu/Documents/UnB')
+setwd('C:/Users/jehhv/OneDrive/Documentos/UnB/PIBIC/GWNBR')
 library(readr)
 GeorgiaData <- read_delim("GeorgiaData.csv", 
                           delim = ";", escape_double = FALSE, trim_ws = TRUE)
@@ -1267,4 +1264,5 @@ GWNBR(example2,YVAR="Mort2564",XVAR=c('Professl','Elderly','OwnHome','Unemply'),
 
 
 
-
+  
+  
