@@ -176,6 +176,8 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
               par <- 1/alphai[i - 1]
             }
           }
+          print(alphai)
+          print(par)
           while (abs(dpar) > 0.000001 & cont1 < 200) {
             par <- ifelse(par < E^(-10), E^(-10), par)
             g <- sum(w * wt * (digamma(par + y) - digamma(par) + log(par) + 1 - log(par + uj) - (par + y) / (par + uj)))
@@ -231,20 +233,15 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
         cont <- cont + 1
         ddpar <- par - parold
       }
-      print(w)
-      print(Ai)
-      print(x)
-      print(wt)
       if(toupper(METHOD)=="FIXED_G"|toupper(METHOD)=="FIXED_BSQ"|toupper(METHOD)=="ADAPTIVE_BSQ"){
         yhat[i] <<- uj[i]
         if(det(t(x)%*%as.matrix((w*Ai*x*wt)))==0){
           S[i] <<- 0
         }
         else{
-          S[i] <<- (x[i,]%*%solve(t(x)%*%(w*Ai*x*wt))*t(x*w*Ai*wt))[i]
+          S[i] <<- (x[i,]%*%solve(t(x)%*%(w*Ai*x*wt))%*%t(x*w*Ai*wt))[i]
         }
         if(!is.null(XVARGLOBAL)){
-          # hat_matrix <- rbind(hat_matrix,(x[i,]%*%solve(t(x)%*%(w*x*wt))*t((x*w*wt)))) criando hat_matrix aqui, entao supostamente nao haveria problema com dimens?o
           if(i==1){
             W_f <- cbind(matrix(i,N,1),w,t(seq(1,nrow(w)))) 
           }
@@ -291,7 +288,7 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
           contb <- 1
           while(abs(diffba) > 0.00001 & contb < 50){
             oldba <- ba
-            hat_matrix <- matrix(0,N,N) #verificar se eh necessario; linha 258 do SAS
+            hat_matrix <- matrix(0,N,N) 
             for(i in 1:N){
               m1 <- (i-1)*n+1
               m2 <- m1 + (n-1)
@@ -373,7 +370,7 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
           }
           S <<- diag((I(n) - hat_matrix) %*% xa %*% solve((xa %*% Aa) %*% t(xa) %*% (I(n) - hat_matrix) %*% xa %*% wt) %*% (xa %*% Aa %*% wt) %*% (I(n) - hat_matrix) + hat_matrix)
         }
-        CV <- sum((y - yhat) %*% wt %*% (y - yhat))
+        CV <- sum((y - yhat) %*% wt %*% (y - yhat)) #pode ser que tenha que transpor. Ver linha 328 do SAS
         if (toupper(MODEL) == "POISSON") {
           ll <- sum(-yhat + y * log(yhat) - lgamma(y + 1))
           npar <- sum(S)
@@ -382,9 +379,8 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
           ll <- sum(y * log(alphai * yhat) - (y + 1 / alphai) * log(1 + alphai * yhat) + lgamma(y + 1 / alphai) - lgamma(1 / alphai) - lgamma(y + 1))
           npar <- sum(S) + sum(S) / nvar
         }
-        
         AIC <- 2 * npar - 2 * ll
-        AICC <- AIC + (2 * npar * (npar + 1)) / (n - npar - 1)
+        AICC <- AIC + (2 * npar * (npar + 1)) / (N - npar - 1)
         if (toupper(BANDWIDTH) == "AIC") { 
           CV <- AICC 
         }
@@ -395,17 +391,17 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
       }
       uj <- ifelse(uj == 0, E^(-10), uj)
       uj <- ifelse(uj == 1, 0.99999, uj)
-      CV <- sum((y - yhat) %*% wt %*% (y - yhat))
+      CV <- sum((y - yhat) %*% wt %*% (y - yhat)) #pode ser que tenha que transpor. Ver linha 349 do SAS
       ll <- sum(y * log(uj) - (1 - y) * log(1 - uj))
       npar <- sum(S)
       AIC <- 2 * npar - 2 * ll
-      AICC <- AIC + (2 * npar * (npar + 1)) / (n - npar - 1)
+      AICC <- AIC + (2 * npar * (npar + 1)) / (N - npar - 1)
       if (toupper(BANDWIDTH) == "AIC") { 
         CV <- AICC 
       }
-      res <- cbind(cv, npar)
+      res <- cbind(CV, npar)
       return(res)
-    } # linha 114! 
+    } # linha 114!
   } #fecha CV!!!!
   # DEFINING GOLDEN SECTION SEARCH PARAMETERS #
   
@@ -461,6 +457,7 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
     }
   }  
   int <- 1
+  print(cv(h1))
   while(abs(h3-h0) > tol*(abs(h1)+abs(h2)) & int<200){
     if(CV2<CV1){
       h0 <- h1
@@ -1194,13 +1191,8 @@ GWNBR <- function(DATA, YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
   }
   # /****************************************/
   if (is.null(GRID)) {
-    # Create and append to _res_ dataset
     res_ <- data.frame(var = c(wt, y, yhat, res, resstd, rsqri, influence, cooksD, sumwi))
-    
-    # Create and append to _beta_ dataset
     beta_ <- data.frame(id = bi[,1], B = bi[,2], x = bi[,3], y = bi[,4])
-    
-    # Create and append to _parameters_ dataset
     parameters_ <- data.frame(id = bi[,1], B = bi[,2], x = bi[,3], y = bi[,4],
                               stdbi = stdbi[,1], tstat = tstat[,1], probt = probt[,1])
     
@@ -1218,18 +1210,12 @@ GWNBR <- function(DATA, YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
       write.csv(alpha_, file = "_alpha_.csv", row.names = FALSE)
     }
   } else {
-    # Create and append to _beta_ dataset
     beta_ <- data.frame(id = bi[,1], B = bi[,2], x = bi[,3], y = bi[,4])
-    
-    # Calculate stdbi and tstat
     stdbi <- sqrt(varbi)
     tstat <- bi[,2] / stdbi
     tstat[is.na(tstat)] <- 0
-    
-    # Create and append to _parameters_ dataset
     parameters_ <- data.frame(id = bi[,1], B = bi[,2], x = bi[,3], y = bi[,4],
                               stdbi = stdbi[,1], tstat = tstat)
-    
     if (toupper(MODEL) == "NEGBIN") {
       atstat <- alphai[,2] / alphai[,3]
       atstat[alphai[,3] == 0] <- 0
