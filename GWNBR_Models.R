@@ -106,7 +106,7 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
     ddpar <- parg-parold
   } #fecha while linha 39
   
-###################################
+  ###################################
   
   LONG <- DATA[, LONG]
   LAT  <- DATA[, LAT]
@@ -341,14 +341,14 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
               uj <- ifelse(uj < E^(-150), E^(-150), uj)
               tt <- y / uj
               tt <- ifelse(tt == 0, E^(-10), tt)
-                
+              
               if (toupper(MODEL) == "POISSON") {
                 dev <- 2 * sum(y * log(tt) - (y - uj))
               }
               if (toupper(MODEL) == "NEGBIN") {
                 dev <- 2 * sum(y * log(tt) - (y + 1 / alpha) * log((1 + alpha * y) / (1 + alpha * uj)))
               }
-                
+              
               ddev <- dev - olddev
               cont2 <- cont2 + 1
             }
@@ -387,13 +387,17 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
         CV <- AICC 
       }
     }
+    print(CV)
     uj <- ifelse(uj == 0, E^(-10), uj)
     uj <- ifelse(uj == 1, 0.99999, uj)
     CV <- sum((y - yhat) %*% wt %*% (y - yhat)) #pode ser que tenha que transpor. Ver linha 349 do SAS
     ll <- sum(y * log(uj) - (1 - y) * log(1 - uj))
+    print(ll)
     npar <- sum(S)
     AIC <- 2 * npar - 2 * ll
     AICC <- AIC + (2 * npar * (npar + 1)) / (N - npar - 1)
+    print(AIC)
+    print(AICC)
     if (toupper(BANDWIDTH) == "AIC") { 
       CV <- AICC 
     }
@@ -514,7 +518,7 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
 
 # TESTES #
 
-setwd('C:/Users/jehhv/OneDrive/Documentos/UnB/PIBIC/GWNBR')
+setwd('D:/Users/jessica.abreu/Documents/UnB')
 example2 <- read.csv("example2.csv")
 example2 <- example2 %>% 
   mutate(Le = log(Loe))
@@ -1264,5 +1268,4 @@ GWNBR(example2,YVAR="Mort2564",XVAR=c('Professl','Elderly','OwnHome','Unemply'),
 
 
 
-  
-  
+
