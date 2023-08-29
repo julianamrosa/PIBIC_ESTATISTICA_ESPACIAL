@@ -321,6 +321,7 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
               }
               alpha <- 1/par
             }
+            print(alpha)
             dev <- 0
             ddev <- 1
             cont2 <- 0
@@ -387,20 +388,6 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
         CV <- AICC 
       }
     }
-    print(CV)
-    uj <- ifelse(uj == 0, E^(-10), uj)
-    uj <- ifelse(uj == 1, 0.99999, uj)
-    CV <- sum((y - yhat) %*% wt %*% (y - yhat)) #pode ser que tenha que transpor. Ver linha 349 do SAS
-    ll <- sum(y * log(uj) - (1 - y) * log(1 - uj))
-    print(ll)
-    npar <- sum(S)
-    AIC <- 2 * npar - 2 * ll
-    AICC <- AIC + (2 * npar * (npar + 1)) / (N - npar - 1)
-    print(AIC)
-    print(AICC)
-    if (toupper(BANDWIDTH) == "AIC") { 
-      CV <- AICC 
-    }
     res <- cbind(CV, npar)
     return(res)
   } #fecha CV!!!!
@@ -435,7 +422,6 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
       bx1 <- upper[GMY]
     }
   }
-  #revisar identacao 
   h0 <- ax1
   h3 <- bx1
   h1 <- bx1-r*(bx1-ax1)
@@ -1265,7 +1251,4 @@ system.time(golden(example2,YVAR="Mort2564", XVAR=c('Professl','Elderly','OwnHom
 
 GWNBR(example2,YVAR="Mort2564",XVAR=c('Professl','Elderly','OwnHome','Unemply'), 
       LAT="Y", LONG="X",MODEL="NEGBIN",OFFSET="Le",METHOD="FIXED_G", H=16780.349)
-
-
-
 
