@@ -31,7 +31,9 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
   S <<- rep(0,N)
   
   # global estimates #
+  y <<- as.numeric(y) 
   uj <- (y+mean(y))/2
+  print(uj)
   nj <- log(uj)
   parg <<- sum((y-uj)^2/uj)/(N-nvar)
   ddpar <- 1
@@ -373,7 +375,8 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
         }
         S <<- diag((I(n) - hat_matrix) %*% xa %*% solve((xa %*% Aa) %*% t(xa) %*% (I(n) - hat_matrix) %*% xa %*% wt) %*% (xa %*% Aa %*% wt) %*% (I(n) - hat_matrix) + hat_matrix)
       }
-      CV <- sum((y - yhat) %*% wt %*% (y - yhat)) #pode ser que tenha que transpor. Ver linha 328 do SAS
+      # CV <- sum((y - yhat) %*% wt %*% (y - yhat)) pode ser que tenha que transpor. Ver linha 328 do SAS
+      CV <- t((y-yhat) %*% wt %*% (y - yhat))
       if (toupper(MODEL) == "POISSON") {
         ll <- sum(-yhat + y * log(yhat) - lgamma(y + 1))
         npar <- sum(S)
@@ -503,14 +506,12 @@ golden <- function(DATA,YVAR, XVAR, XVARGLOBAL=NULL, WEIGHT=NULL, LAT, LONG,
 } #fecha golden
 
 # TESTES #
-
-setwd('D:/Users/jessica.abreu/Documents/UnB')
 example2 <- read.csv("example2.csv")
 example2 <- example2 %>% 
   mutate(Le = log(Loe))
 
 system.time(golden(example2,YVAR="Mort2564", XVAR=c('Professl','Elderly','OwnHome','Unemply'), 
-                   LAT="Y", LONG="X",MODEL="NEGBIN",OFFSET="Le",METHOD="FIXED_G",BANDWIDTH="AIC",GLOBALMIN = 'NO'))
+                   LAT="Y", LONG="X",MODEL="NEGBIN",OFFSET="Le",METHOD="FIXED_G",BANDWIDTH="AIC",GLOBALMIN = 'NO')) #25 minutos
 
 traceback()
 # #golden(DATA=nakaya,YVAR=Mort2564,XVAR=c('Professl' 'Elderly' 'OwnHome' 'Unemply'),
@@ -1252,3 +1253,37 @@ system.time(golden(example2,YVAR="Mort2564", XVAR=c('Professl','Elderly','OwnHom
 GWNBR(example2,YVAR="Mort2564",XVAR=c('Professl','Elderly','OwnHome','Unemply'), 
       LAT="Y", LONG="X",MODEL="NEGBIN",OFFSET="Le",METHOD="FIXED_G", H=16780.349)
 
+# --------------------------------------------------------------- # 
+
+# Rodando com Georgia Data
+georgia_data <- read_delim("GeorgiaData.csv", 
+                          delim = ";", escape_double = FALSE, trim_ws = TRUE)
+View(georgia_data)
+
+#Discretizando y e padronizando x
+georgia_nb_std <- georgia_data
+georgia_nb_std$PctBach <- as.integer(georgia_nb_std$PctBach)
+
+#TotPop90
+georgia_nb_std$TotPop90 <- (georgia_nb_std$TotPop90-mean(georgia_nb_std$TotPop90))/sd(georgia_nb_std$TotPop90)
+
+#PctRural
+georgia_nb_std$PctRural <- (georgia_nb_std$PctRural-mean(georgia_nb_std$PctRural))/sd(georgia_nb_std$PctRural)
+
+#PctEld
+georgia_nb_std$PctEld <- (georgia_nb_std$PctEld-mean(georgia_nb_std$PctEld))/sd(georgia_nb_std$PctEld)
+
+#PctFB
+georgia_nb_std$PctFB <- (georgia_nb_std$PctFB-mean(georgia_nb_std$PctFB))/sd(georgia_nb_std$PctFB)
+
+#PctPov
+georgia_nb_std$PctPov <- (georgia_nb_std$PctPov-mean(georgia_nb_std$PctPov))/sd(georgia_nb_std$PctPov)
+
+#PctBlack
+georgia_nb_std$PctBlack <- (georgia_nb_std$PctBlack-mean(georgia_nb_std$PctBlack))/sd(georgia_nb_std$PctBlack)
+
+
+system.time(golden(georgia_nb_std,YVAR="PctBach", 
+                   XVAR=c("TotPop90", "PctRural", "PctEld", "PctFB", "PctPov", "PctBlack"), 
+                   LAT="Y", LONG="X", MODEL="NEGBIN", METHOD="FIXED_G",
+                   BANDWIDTH="AIC", GLOBALMIN='NO'))
