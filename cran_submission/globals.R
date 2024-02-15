@@ -1,0 +1,1 @@
+globalVariables(c("ai", "max_dist", "mrj", "rj", "s", "sm", "sm3"))

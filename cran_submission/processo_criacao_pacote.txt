@@ -1,0 +1,17 @@
+organizar diretório do projeto:
+pasta R - deve conter o "manual" do pacote e o "manual" dos dados ------ok
+man - arquivos .Rd (para mgwnbr e georgia) ---------ok
+data - deve conter arquivo georgia.RData -----------ok
+DESCRIPTION - arrumar descrição do pacote e colocar spgwr como pré-requisito -----------ok
+
+rodar create, depois document, depois install ----------ok
+
+subir para o github e testar o install_github("julianamrosa/mgwnbr") ---------ok
+
+rodar checagens pelo código que o Roberto mandou por email ------ok
+fazer alterações necessárias --------ok
+desinstalar pacote, rodar document() e install(), atualizar no github
+
+estando tudo ok, subir para o cran
+
+*Obs.:	problemas: NULL,  lastMiKTeXException, HTML --> podem ser ignorados
