@@ -9,6 +9,8 @@ setwd("C:/Users/Juliana Rosa/OneDrive/Documents/PIBIC/pacote_final")
 # Check for CRAN specific requirements using rhub and save it in the results 
 # objects
 verify_mgwnbr <- rhub::check_for_cran("mgwnbr")
+#check_rhub()
+#rhub::check()
 # Get the summary of your results
 verify_mgwnbr$cran_summary()
 
